@@ -4,13 +4,15 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.UUID;
+
 @Getter
 @Setter
 public class MovieGenreRequest {
 
-    @NotNull(message = "Movie ID is required")
-    private Long movieId;
+    @NotNull(message = "Movie public ID is required")
+    private UUID moviePublicId;
 
-    @NotNull(message = "Genre ID is required")
-    private Long genreId;
+    @NotNull(message = "Genre public ID is required")
+    private UUID genrePublicId;
 }

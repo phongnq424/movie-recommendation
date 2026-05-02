@@ -16,4 +16,6 @@ public interface MovieGenreRepository extends JpaRepository<MovieGenre, Long> {
     boolean existsByMovieIdAndGenreId(Long movieId, Long genreId);
 
     void deleteByMovieIdAndGenreId(Long movieId, Long genreId);
+
+    void deleteByMovieId(Long movieId);
 }

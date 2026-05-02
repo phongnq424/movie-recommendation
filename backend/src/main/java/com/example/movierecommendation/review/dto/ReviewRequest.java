@@ -6,15 +6,17 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.UUID;
+
 @Getter
 @Setter
 public class ReviewRequest {
 
     @NotNull(message = "User ID is required")
-    private Long userId;
+    private UUID userPublicId;
 
     @NotNull(message = "Movie ID is required")
-    private Long movieId;
+    private UUID moviePublicId;
 
     @NotBlank(message = "Review content is required")
     @Size(max = 3000, message = "Review content must not exceed 3000 characters")

@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -27,14 +28,14 @@ public class ReviewService {
 
     @Transactional
     public ReviewResponse createOrUpdateReview(ReviewRequest request) {
-        User user = userRepository.findById(request.getUserId())
+        User user = userRepository.findByPublicId(request.getUserPublicId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Movie movie = movieRepository.findById(request.getMovieId())
+        Movie movie = movieRepository.findByPublicId(request.getMoviePublicId())
                 .orElseThrow(() -> new RuntimeException("Movie not found"));
 
         Review review = reviewRepository
-                .findByUserIdAndMovieId(request.getUserId(), request.getMovieId())
+                .findByUserIdAndMovieId(user.getId(), movie.getId())
                 .orElse(null);
 
         if (review == null) {
@@ -57,29 +58,37 @@ public class ReviewService {
         return ReviewResponse.from(reviewRepository.save(review));
     }
 
-    public List<ReviewResponse> getPublishedReviewsByMovie(Long movieId) {
-        return reviewRepository.findByMovieIdAndStatusOrderByCreatedAtDesc(movieId, STATUS_PUBLISHED)
+    public List<ReviewResponse> getPublishedReviewsByMovie(UUID movieId) {
+        Movie movie = movieRepository.findByPublicId(movieId)
+                .orElseThrow(() -> new RuntimeException("Movie not found"));
+        return reviewRepository.findByMovieIdAndStatusOrderByCreatedAtDesc(movie.getId(), STATUS_PUBLISHED)
                 .stream()
                 .map(ReviewResponse::from)
                 .toList();
     }
 
-    public List<ReviewResponse> getAllReviewsByMovie(Long movieId) {
-        return reviewRepository.findByMovieIdOrderByCreatedAtDesc(movieId)
+    public List<ReviewResponse> getAllReviewsByMovie(UUID movieId) {
+        Movie movie = movieRepository.findByPublicId(movieId)
+                .orElseThrow(() -> new RuntimeException("Movie not found"));
+        return reviewRepository.findByMovieIdOrderByCreatedAtDesc(movie.getId())
                 .stream()
                 .map(ReviewResponse::from)
                 .toList();
     }
 
-    public List<ReviewResponse> getPublishedReviewsByUser(Long userId) {
-        return reviewRepository.findByUserIdAndStatusOrderByCreatedAtDesc(userId, STATUS_PUBLISHED)
+    public List<ReviewResponse> getPublishedReviewsByUser(UUID userId) {
+        User user = userRepository.findByPublicId(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return reviewRepository.findByUserIdAndStatusOrderByCreatedAtDesc(user.getId(), STATUS_PUBLISHED)
                 .stream()
                 .map(ReviewResponse::from)
                 .toList();
     }
 
-    public List<ReviewResponse> getAllReviewsByUser(Long userId) {
-        return reviewRepository.findByUserIdOrderByCreatedAtDesc(userId)
+    public List<ReviewResponse> getAllReviewsByUser(UUID userId) {
+        User user = userRepository.findByPublicId(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return reviewRepository.findByUserIdOrderByCreatedAtDesc(user.getId())
                 .stream()
                 .map(ReviewResponse::from)
                 .toList();

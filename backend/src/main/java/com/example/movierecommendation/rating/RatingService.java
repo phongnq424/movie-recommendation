@@ -1,5 +1,6 @@
 package com.example.movierecommendation.rating;
 
+import com.example.movierecommendation.genre.Genre;
 import com.example.movierecommendation.movie.Movie;
 import com.example.movierecommendation.movie.MovieRepository;
 import com.example.movierecommendation.rating.dto.RatingRequest;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -24,14 +26,11 @@ public class RatingService {
     public RatingResponse rateMovie(RatingRequest request) {
         validateRatingRequest(request);
 
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        Movie movie = movieRepository.findById(request.getMovieId())
-                .orElseThrow(() -> new RuntimeException("Movie not found"));
+        Movie movie = getMovieByPublicId(request.getMoviePublicId());
+        User user = getUserByPublicId(request.getUserPublicId());
 
         Rating rating = ratingRepository
-                .findByUserIdAndMovieId(request.getUserId(), request.getMovieId())
+                .findByUserIdAndMovieId(user.getId(), movie.getId())
                 .orElse(null);
 
         if (rating == null) {
@@ -51,26 +50,28 @@ public class RatingService {
         return RatingResponse.from(savedRating);
     }
 
-    public List<RatingResponse> getRatingsByUser(Long userId) {
-        return ratingRepository.findByUserId(userId)
+    public List<RatingResponse> getRatingsByUser(UUID userPublicId) {
+        User user = getUserByPublicId(userPublicId);
+        return ratingRepository.findByUserId(user.getId())
                 .stream()
                 .map(RatingResponse::from)
                 .toList();
     }
 
-    public List<RatingResponse> getRatingsByMovie(Long movieId) {
-        return ratingRepository.findByMovieId(movieId)
+    public List<RatingResponse> getRatingsByMovie(UUID moviePublicId) {
+        Movie movie = getMovieByPublicId(moviePublicId);
+        return ratingRepository.findByMovieId(movie.getId())
                 .stream()
                 .map(RatingResponse::from)
                 .toList();
     }
 
     private void validateRatingRequest(RatingRequest request) {
-        if (request.getUserId() == null) {
+        if (request.getUserPublicId() == null) {
             throw new RuntimeException("User ID is required");
         }
 
-        if (request.getMovieId() == null) {
+        if (request.getMoviePublicId() == null) {
             throw new RuntimeException("Movie ID is required");
         }
 
@@ -98,5 +99,21 @@ public class RatingService {
         movie.setRatingCount(ratings.size());
 
         movieRepository.save(movie);
+    }
+    private Movie getMovieByPublicId(UUID moviePublicId) {
+        if (moviePublicId == null) {
+            throw new RuntimeException("Movie public ID is required");
+        }
+
+        return movieRepository.findByPublicId(moviePublicId)
+                .orElseThrow(() -> new RuntimeException("Movie not found"));
+    }
+    private User getUserByPublicId(UUID userPublicId) {
+        if (userPublicId == null) {
+            throw new RuntimeException("User public ID is required");
+        }
+
+        return userRepository.findByPublicId(userPublicId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
     }
 }

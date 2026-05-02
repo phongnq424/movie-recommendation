@@ -5,17 +5,18 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.UUID;
+
 @Getter
 @Setter
 @Builder
 public class MovieActorResponse {
 
-    private Long id;
-
-    private Long movieId;
+    private UUID moviePublicId;
     private String movieTitle;
+    private String movieSlug;
 
-    private Long actorId;
+    private UUID actorPublicId;
     private String actorFullName;
     private String actorAvatarUrl;
 
@@ -25,10 +26,10 @@ public class MovieActorResponse {
 
     public static MovieActorResponse from(MovieActor movieActor) {
         return MovieActorResponse.builder()
-                .id(movieActor.getId())
-                .movieId(movieActor.getMovie().getId())
+                .moviePublicId(movieActor.getMovie().getPublicId())
                 .movieTitle(movieActor.getMovie().getTitle())
-                .actorId(movieActor.getActor().getId())
+                .movieSlug(movieActor.getMovie().getSlug())
+                .actorPublicId(movieActor.getActor().getPublicId())
                 .actorFullName(movieActor.getActor().getFullName())
                 .actorAvatarUrl(movieActor.getActor().getAvatarUrl())
                 .characterName(movieActor.getCharacterName())

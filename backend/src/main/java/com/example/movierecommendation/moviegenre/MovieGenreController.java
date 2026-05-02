@@ -2,11 +2,13 @@ package com.example.movierecommendation.moviegenre;
 
 import com.example.movierecommendation.moviegenre.dto.MovieGenreRequest;
 import com.example.movierecommendation.moviegenre.dto.MovieGenreResponse;
+import com.example.movierecommendation.moviegenre.dto.SetMovieGenresRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/movie-genres")
@@ -23,28 +25,41 @@ public class MovieGenreController {
         return movieGenreService.addGenreToMovie(request);
     }
 
-    @GetMapping("/movie/{movieId}")
-    public List<MovieGenreResponse> getGenresByMovie(@PathVariable Long movieId) {
-        return movieGenreService.getGenresByMovie(movieId);
-    }
-
-    @GetMapping("/genre/{genreId}")
-    public List<MovieGenreResponse> getMoviesByGenre(@PathVariable Long genreId) {
-        return movieGenreService.getMoviesByGenre(genreId);
-    }
-
-    @DeleteMapping("/{id}")
-    public String removeGenreFromMovie(@PathVariable Long id) {
-        movieGenreService.removeGenreFromMovie(id);
-        return "Genre removed from movie successfully";
-    }
-
-    @DeleteMapping("/movie/{movieId}/genre/{genreId}")
-    public String removeGenreFromMovie(
-            @PathVariable Long movieId,
-            @PathVariable Long genreId
+    @GetMapping("/movie/{moviePublicId}")
+    public List<MovieGenreResponse> getGenresByMovie(
+            @PathVariable UUID moviePublicId
     ) {
-        movieGenreService.removeGenreFromMovie(movieId, genreId);
+        return movieGenreService.getGenresByMovie(moviePublicId);
+    }
+
+    @GetMapping("/genre/{genrePublicId}")
+    public List<MovieGenreResponse> getMoviesByGenre(
+            @PathVariable UUID genrePublicId
+    ) {
+        return movieGenreService.getMoviesByGenre(genrePublicId);
+    }
+
+    @DeleteMapping("/movie/{moviePublicId}/genre/{genrePublicId}")
+    public String removeGenreFromMovie(
+            @PathVariable UUID moviePublicId,
+            @PathVariable UUID genrePublicId
+    ) {
+        movieGenreService.removeGenreFromMovie(moviePublicId, genrePublicId);
         return "Genre removed from movie successfully";
+    }
+
+    /**
+     * Bulk set genres cho một movie.
+     * Đây là API admin nên dùng khi save form movie genres.
+     */
+    @PutMapping("/movie/{moviePublicId}")
+    public List<MovieGenreResponse> setGenresForMovie(
+            @PathVariable UUID moviePublicId,
+            @Valid @RequestBody SetMovieGenresRequest request
+    ) {
+        return movieGenreService.setGenresForMovie(
+                moviePublicId,
+                request.getGenrePublicIds()
+        );
     }
 }

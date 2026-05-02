@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/reviews")
@@ -33,7 +34,7 @@ public class ReviewController {
      */
     @GetMapping("/movie/{movieId}")
     public List<ReviewResponse> getPublishedReviewsByMovie(
-            @PathVariable Long movieId
+            @PathVariable UUID movieId
     ) {
         return reviewService.getPublishedReviewsByMovie(movieId);
     }
@@ -43,7 +44,7 @@ public class ReviewController {
      */
     @GetMapping("/movie/{movieId}/all")
     public List<ReviewResponse> getAllReviewsByMovie(
-            @PathVariable Long movieId
+            @PathVariable UUID movieId
     ) {
         return reviewService.getAllReviewsByMovie(movieId);
     }
@@ -53,7 +54,7 @@ public class ReviewController {
      */
     @GetMapping("/user/{userId}")
     public List<ReviewResponse> getPublishedReviewsByUser(
-            @PathVariable Long userId
+            @PathVariable UUID userId
     ) {
         return reviewService.getPublishedReviewsByUser(userId);
     }
@@ -63,7 +64,7 @@ public class ReviewController {
      */
     @GetMapping("/user/{userId}/all")
     public List<ReviewResponse> getAllReviewsByUser(
-            @PathVariable Long userId
+            @PathVariable UUID userId
     ) {
         return reviewService.getAllReviewsByUser(userId);
     }

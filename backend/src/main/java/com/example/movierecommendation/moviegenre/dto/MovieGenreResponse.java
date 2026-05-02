@@ -5,26 +5,27 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.UUID;
+
 @Getter
 @Setter
 @Builder
 public class MovieGenreResponse {
 
-    private Long id;
-
-    private Long movieId;
+    private UUID moviePublicId;
     private String movieTitle;
+    private String movieSlug;
 
-    private Long genreId;
+    private UUID genrePublicId;
     private String genreName;
     private String genreSlug;
 
     public static MovieGenreResponse from(MovieGenre movieGenre) {
         return MovieGenreResponse.builder()
-                .id(movieGenre.getId())
-                .movieId(movieGenre.getMovie().getId())
+                .moviePublicId(movieGenre.getMovie().getPublicId())
                 .movieTitle(movieGenre.getMovie().getTitle())
-                .genreId(movieGenre.getGenre().getId())
+                .movieSlug(movieGenre.getMovie().getSlug())
+                .genrePublicId(movieGenre.getGenre().getPublicId())
                 .genreName(movieGenre.getGenre().getName())
                 .genreSlug(movieGenre.getGenre().getSlug())
                 .build();

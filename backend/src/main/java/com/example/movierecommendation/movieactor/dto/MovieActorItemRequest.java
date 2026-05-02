@@ -8,10 +8,7 @@ import java.util.UUID;
 
 @Getter
 @Setter
-public class MovieActorRequest {
-
-    @NotNull(message = "Movie public ID is required")
-    private UUID moviePublicId;
+public class MovieActorItemRequest {
 
     @NotNull(message = "Actor public ID is required")
     private UUID actorPublicId;

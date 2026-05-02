@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -14,11 +15,11 @@ public class ReviewResponse {
 
     private Long id;
 
-    private Long userId;
+    private UUID userPublicId;
     private String userFullName;
     private String userAvatarUrl;
 
-    private Long movieId;
+    private UUID moviePublicId;
     private String movieTitle;
 
     private String content;
@@ -31,10 +32,10 @@ public class ReviewResponse {
     public static ReviewResponse from(Review review) {
         return ReviewResponse.builder()
                 .id(review.getId())
-                .userId(review.getUser().getId())
+                .userPublicId(review.getUser().getPublicId())
                 .userFullName(review.getUser().getFullName())
                 .userAvatarUrl(review.getUser().getAvatarUrl())
-                .movieId(review.getMovie().getId())
+                .moviePublicId(review.getMovie().getPublicId())
                 .movieTitle(review.getMovie().getTitle())
                 .content(review.getContent())
                 .spoiler(review.getSpoiler())
