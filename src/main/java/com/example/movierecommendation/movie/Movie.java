@@ -25,6 +25,10 @@ public class Movie {
 
     private String posterUrl;
 
+    private String trailerUrl;
+
+    private String movieUrl;
+
     private Double averageRating = 0.0;
 
     private Integer ratingCount = 0;

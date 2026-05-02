@@ -1,14 +1,17 @@
 package com.example.movierecommendation.movie.dto;
 
 import com.example.movierecommendation.movie.Movie;
+import com.example.movierecommendation.movieactor.dto.MovieActorResponse;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 @Builder
-public class MovieResponse {
+public class MovieDetailResponse {
 
     private Long id;
     private String title;
@@ -20,8 +23,10 @@ public class MovieResponse {
     private Double averageRating;
     private Integer ratingCount;
 
-    public static MovieResponse from(Movie movie) {
-        return MovieResponse.builder()
+    private List<MovieActorResponse> actors;
+
+    public static MovieDetailResponse from(Movie movie, List<MovieActorResponse> actors) {
+        return MovieDetailResponse.builder()
                 .id(movie.getId())
                 .title(movie.getTitle())
                 .description(movie.getDescription())
@@ -31,6 +36,7 @@ public class MovieResponse {
                 .movieUrl(movie.getMovieUrl())
                 .averageRating(movie.getAverageRating())
                 .ratingCount(movie.getRatingCount())
+                .actors(actors)
                 .build();
     }
 }
