@@ -129,11 +129,6 @@ public class ReviewService {
         reviewRepository.save(review);
     }
 
-    public void hardDeleteReview(Long id) {
-        Review review = getReviewEntityById(id);
-
-        reviewRepository.delete(review);
-    }
 
     private Review getReviewEntityById(Long id) {
         return reviewRepository.findById(id)

@@ -101,10 +101,4 @@ public class ReviewController {
         reviewService.softDeleteReview(id);
         return "Review deleted successfully";
     }
-
-    @DeleteMapping("/{id}/hard")
-    public String hardDeleteReview(@PathVariable Long id) {
-        reviewService.hardDeleteReview(id);
-        return "Review permanently deleted successfully";
-    }
 }
