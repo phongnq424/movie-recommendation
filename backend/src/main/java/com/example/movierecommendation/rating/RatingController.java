@@ -2,7 +2,9 @@ package com.example.movierecommendation.rating;
 
 import com.example.movierecommendation.rating.dto.RatingRequest;
 import com.example.movierecommendation.rating.dto.RatingResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,8 +19,12 @@ public class RatingController {
     private final RatingService ratingService;
 
     @PostMapping
-    public RatingResponse rateMovie(@RequestBody RatingRequest request) {
-        return ratingService.rateMovie(request);
+    public RatingResponse rateMovie(
+            Authentication authentication,
+            @Valid @RequestBody RatingRequest request
+    ) {
+        UUID currentUserPublicId = UUID.fromString(authentication.getName());
+        return ratingService.rateMovie(currentUserPublicId, request);
     }
 
     @GetMapping("/user/{userId}")

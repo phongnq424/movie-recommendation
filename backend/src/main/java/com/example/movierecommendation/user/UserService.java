@@ -16,6 +16,7 @@ public class UserService {
     private static final String STATUS_ACTIVE = "ACTIVE";
     private static final String STATUS_INACTIVE = "INACTIVE";
     private static final String STATUS_BANNED = "BANNED";
+    private static final String STATUS_DELETED = "DELETED";
 
     private final UserRepository userRepository;
 
@@ -80,7 +81,8 @@ public class UserService {
 
     public void deleteUser(UUID publicId) {
         User user = getUserEntityByPublicId(publicId);
-        userRepository.delete(user);
+        user.setStatus(STATUS_DELETED);
+        userRepository.save(user);
     }
 
     public User getUserEntityByPublicId(UUID publicId) {
@@ -97,8 +99,9 @@ public class UserService {
 
         if (!normalizedStatus.equals(STATUS_ACTIVE)
                 && !normalizedStatus.equals(STATUS_INACTIVE)
-                && !normalizedStatus.equals(STATUS_BANNED)) {
-            throw new RuntimeException("Status must be ACTIVE, INACTIVE, or BANNED");
+                && !normalizedStatus.equals(STATUS_BANNED)
+                && !normalizedStatus.equals(STATUS_DELETED)) {
+            throw new RuntimeException("Status must be ACTIVE, INACTIVE, BANNED, or DELETED");
         }
     }
 

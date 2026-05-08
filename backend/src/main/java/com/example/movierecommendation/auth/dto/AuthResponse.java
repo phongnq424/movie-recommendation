@@ -18,13 +18,25 @@ public class AuthResponse {
     private String role;
     private String message;
 
-    public static AuthResponse from(User user, String message) {
+    private String accessToken;
+    private String refreshToken;
+    private String tokenType;
+
+    public static AuthResponse from(
+            User user,
+            String message,
+            String accessToken,
+            String refreshToken
+    ) {
         return AuthResponse.builder()
                 .userPublicId(user.getPublicId())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
                 .role(user.getRole())
                 .message(message)
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .tokenType("Bearer")
                 .build();
     }
 }

@@ -12,9 +12,6 @@ import java.util.UUID;
 @Setter
 public class ReviewRequest {
 
-    @NotNull(message = "User ID is required")
-    private UUID userPublicId;
-
     @NotNull(message = "Movie ID is required")
     private UUID moviePublicId;
 

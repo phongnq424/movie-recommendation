@@ -23,11 +23,11 @@ public class RatingService {
     private final UserRepository userRepository;
 
     @Transactional
-    public RatingResponse rateMovie(RatingRequest request) {
+    public RatingResponse rateMovie(UUID currentUserPublicId, RatingRequest request) {
         validateRatingRequest(request);
 
         Movie movie = getMovieByPublicId(request.getMoviePublicId());
-        User user = getUserByPublicId(request.getUserPublicId());
+        User user = getUserByPublicId(currentUserPublicId);
 
         Rating rating = ratingRepository
                 .findByUserIdAndMovieId(user.getId(), movie.getId())
@@ -44,7 +44,6 @@ public class RatingService {
         }
 
         Rating savedRating = ratingRepository.save(rating);
-
         updateMovieAverageRating(movie.getId());
 
         return RatingResponse.from(savedRating);
@@ -67,10 +66,6 @@ public class RatingService {
     }
 
     private void validateRatingRequest(RatingRequest request) {
-        if (request.getUserPublicId() == null) {
-            throw new RuntimeException("User ID is required");
-        }
-
         if (request.getMoviePublicId() == null) {
             throw new RuntimeException("Movie ID is required");
         }

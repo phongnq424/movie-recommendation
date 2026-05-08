@@ -5,6 +5,7 @@ import com.example.movierecommendation.user.dto.UserStatusUpdateRequest;
 import com.example.movierecommendation.user.dto.UserUpdateRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -63,5 +64,20 @@ public class UserController {
     public String deleteUser(@PathVariable UUID publicId) {
         userService.deleteUser(publicId);
         return "User deleted successfully";
+    }
+
+    @GetMapping("/me")
+    public UserResponse getCurrentUser(Authentication authentication) {
+        UUID currentUserPublicId = UUID.fromString(authentication.getName());
+        return userService.getUserByPublicId(currentUserPublicId);
+    }
+
+    @PutMapping("/me/profile")
+    public UserResponse updateCurrentUserProfile(
+            Authentication authentication,
+            @Valid @RequestBody UserUpdateRequest request
+    ) {
+        UUID currentUserPublicId = UUID.fromString(authentication.getName());
+        return userService.updateUserProfile(currentUserPublicId, request);
     }
 }

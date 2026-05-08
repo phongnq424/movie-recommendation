@@ -27,8 +27,11 @@ public class ReviewService {
     private final MovieRepository movieRepository;
 
     @Transactional
-    public ReviewResponse createOrUpdateReview(ReviewRequest request) {
-        User user = userRepository.findByPublicId(request.getUserPublicId())
+    public ReviewResponse createOrUpdateReview(
+            UUID currentUserPublicId,
+            ReviewRequest request
+    ) {
+        User user = userRepository.findByPublicId(currentUserPublicId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         Movie movie = movieRepository.findByPublicId(request.getMoviePublicId())
@@ -48,7 +51,7 @@ public class ReviewService {
                     .build();
         } else {
             if (STATUS_DELETED.equals(review.getStatus())) {
-                review.setStatus(STATUS_PUBLISHED);
+                throw new RuntimeException("Deleted review cannot be updated");
             }
 
             review.setContent(request.getContent().trim());
@@ -61,7 +64,9 @@ public class ReviewService {
     public List<ReviewResponse> getPublishedReviewsByMovie(UUID movieId) {
         Movie movie = movieRepository.findByPublicId(movieId)
                 .orElseThrow(() -> new RuntimeException("Movie not found"));
-        return reviewRepository.findByMovieIdAndStatusOrderByCreatedAtDesc(movie.getId(), STATUS_PUBLISHED)
+
+        return reviewRepository
+                .findByMovieIdAndStatusOrderByCreatedAtDesc(movie.getId(), STATUS_PUBLISHED)
                 .stream()
                 .map(ReviewResponse::from)
                 .toList();
@@ -70,6 +75,7 @@ public class ReviewService {
     public List<ReviewResponse> getAllReviewsByMovie(UUID movieId) {
         Movie movie = movieRepository.findByPublicId(movieId)
                 .orElseThrow(() -> new RuntimeException("Movie not found"));
+
         return reviewRepository.findByMovieIdOrderByCreatedAtDesc(movie.getId())
                 .stream()
                 .map(ReviewResponse::from)
@@ -79,7 +85,19 @@ public class ReviewService {
     public List<ReviewResponse> getPublishedReviewsByUser(UUID userId) {
         User user = userRepository.findByPublicId(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        return reviewRepository.findByUserIdAndStatusOrderByCreatedAtDesc(user.getId(), STATUS_PUBLISHED)
+
+        return reviewRepository
+                .findByUserIdAndStatusOrderByCreatedAtDesc(user.getId(), STATUS_PUBLISHED)
+                .stream()
+                .map(ReviewResponse::from)
+                .toList();
+    }
+
+    public List<ReviewResponse> getMyReviews(UUID currentUserPublicId) {
+        User user = userRepository.findByPublicId(currentUserPublicId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return reviewRepository.findByUserIdOrderByCreatedAtDesc(user.getId())
                 .stream()
                 .map(ReviewResponse::from)
                 .toList();
@@ -88,31 +106,59 @@ public class ReviewService {
     public List<ReviewResponse> getAllReviewsByUser(UUID userId) {
         User user = userRepository.findByPublicId(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
         return reviewRepository.findByUserIdOrderByCreatedAtDesc(user.getId())
                 .stream()
                 .map(ReviewResponse::from)
                 .toList();
     }
 
-    public ReviewResponse getReviewById(Long id) {
+    public ReviewResponse getReviewById(
+            Long id,
+            UUID currentUserPublicId,
+            boolean isAdmin
+    ) {
         Review review = getReviewEntityById(id);
-        return ReviewResponse.from(review);
+
+        boolean isOwner = review.getUser().getPublicId().equals(currentUserPublicId);
+
+        if (STATUS_PUBLISHED.equals(review.getStatus())) {
+            return ReviewResponse.from(review);
+        }
+
+        if (isAdmin || isOwner) {
+            return ReviewResponse.from(review);
+        }
+
+        throw new RuntimeException("Review not found");
     }
 
-    public ReviewResponse updateReview(Long id, ReviewRequest request) {
+    public ReviewResponse updateReview(
+            Long id,
+            UUID currentUserPublicId,
+            boolean isAdmin,
+            ReviewRequest request
+    ) {
         Review review = getReviewEntityById(id);
+
+        if (!isAdmin && !review.getUser().getPublicId().equals(currentUserPublicId)) {
+            throw new RuntimeException("You can only update your own review");
+        }
+
+        if (STATUS_DELETED.equals(review.getStatus())) {
+            throw new RuntimeException("Deleted review cannot be updated");
+        }
 
         review.setContent(request.getContent().trim());
         review.setSpoiler(request.getSpoiler() != null ? request.getSpoiler() : false);
 
-        if (STATUS_DELETED.equals(review.getStatus())) {
-            review.setStatus(STATUS_PUBLISHED);
-        }
-
         return ReviewResponse.from(reviewRepository.save(review));
     }
 
-    public ReviewResponse updateReviewStatus(Long id, ReviewStatusUpdateRequest request) {
+    public ReviewResponse updateReviewStatus(
+            Long id,
+            ReviewStatusUpdateRequest request
+    ) {
         Review review = getReviewEntityById(id);
 
         String status = normalizeStatus(request.getStatus());
@@ -121,14 +167,24 @@ public class ReviewService {
         return ReviewResponse.from(reviewRepository.save(review));
     }
 
-    public void softDeleteReview(Long id) {
+    public void softDeleteReview(
+            Long id,
+            UUID currentUserPublicId,
+            boolean isAdmin
+    ) {
         Review review = getReviewEntityById(id);
 
-        review.setStatus(STATUS_DELETED);
+        if (!isAdmin && !review.getUser().getPublicId().equals(currentUserPublicId)) {
+            throw new RuntimeException("You can only delete your own review");
+        }
 
+        if (STATUS_DELETED.equals(review.getStatus())) {
+            return;
+        }
+
+        review.setStatus(STATUS_DELETED);
         reviewRepository.save(review);
     }
-
 
     private Review getReviewEntityById(Long id) {
         return reviewRepository.findById(id)
