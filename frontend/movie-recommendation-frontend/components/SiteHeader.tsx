@@ -1,4 +1,8 @@
+'use client';
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
     Bell,
     ChevronDown,
@@ -6,8 +10,10 @@ import {
     LogIn,
     Menu,
     Search,
+    Settings,
     User,
 } from "lucide-react";
+import { authService } from "@/services/auth.service";
 
 const navItems = [
     { label: "Trang chủ", href: "/", active: true },
@@ -19,6 +25,36 @@ const navItems = [
 ];
 
 export function SiteHeader() {
+    const [user, setUser] = useState<{ fullName: string; role: string; userPublicId: string } | null>(null);
+    const [showDropdown, setShowDropdown] = useState(false);
+    const router = useRouter();
+
+    useEffect(() => {
+        const checkAuth = () => {
+            const userInfo = localStorage.getItem('user_info');
+            if (userInfo) {
+                setUser(JSON.parse(userInfo));
+            } else {
+                setUser(null);
+            }
+        };
+        checkAuth();
+        window.addEventListener('auth-change', checkAuth);
+        return () => window.removeEventListener('auth-change', checkAuth);
+    }, []);
+
+    const handleLogout = async () => {
+        try {
+            await authService.logout();
+        } catch (error) {
+            console.error('Lỗi khi đăng xuất:', error);
+        } finally {
+            setUser(null);
+            window.dispatchEvent(new Event('auth-change'));
+            router.push('/');
+        }
+    };
+
     return (
         <header className="fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-black/90 backdrop-blur-md transition-all">
             <div className="mx-auto flex h-20 max-w-[1460px] items-center justify-between px-5 sm:px-8 lg:px-12">
@@ -50,8 +86,8 @@ export function SiteHeader() {
                                         size={14}
                                         strokeWidth={2}
                                         className={`transition-transform duration-200 group-hover:rotate-180 ${item.active
-                                                ? "text-white"
-                                                : "text-zinc-500 group-hover:text-zinc-300"
+                                            ? "text-white"
+                                            : "text-zinc-500 group-hover:text-zinc-300"
                                             }`}
                                     />
                                 )}
@@ -102,14 +138,50 @@ export function SiteHeader() {
                         </button>
                     </div>
 
-                    {/* Login Button */}
-                    <Link
-                        href="/login"
-                        className="hidden md:flex h-10 items-center justify-center gap-2 rounded-full bg-red-600 px-5 text-sm font-semibold text-white transition-all hover:bg-red-700 hover:scale-105 active:scale-95"
-                    >
-                        <LogIn size={18} strokeWidth={2} />
-                        <span>Đăng nhập</span>
-                    </Link>
+                    {/* Auth Section */}
+                    {user ? (
+                        <div className="relative hidden md:block">
+                            <button
+                                onClick={() => setShowDropdown(!showDropdown)}
+                                className="flex h-10 items-center gap-2 rounded-full bg-white/10 px-4 text-sm font-semibold text-white transition-colors hover:bg-white/20"
+                            >
+                                <User size={18} strokeWidth={2} />
+                                <span>{user.fullName}</span>
+                                <ChevronDown size={14} className={`transition-transform duration-200 ${showDropdown ? "rotate-180" : ""}`} />
+                            </button>
+
+                            {showDropdown && (
+                                <div className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-white/10 bg-[#111114] shadow-xl shadow-black/50">
+                                    <Link
+                                        href="/profile"
+                                        onClick={() => setShowDropdown(false)}
+                                        className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+                                    >
+                                        <Settings size={16} />
+                                        Hồ sơ cá nhân
+                                    </Link>
+                                    <button
+                                        onClick={() => {
+                                            setShowDropdown(false);
+                                            handleLogout();
+                                        }}
+                                        className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-red-400 transition-colors hover:bg-white/10 hover:text-red-300"
+                                    >
+                                        <LogIn size={16} className="rotate-180" />
+                                        Đăng xuất
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <Link
+                            href="/auth/login"
+                            className="hidden md:flex h-10 items-center justify-center gap-2 rounded-full bg-red-600 px-5 text-sm font-semibold text-white transition-all hover:bg-red-700 hover:scale-105 active:scale-95"
+                        >
+                            <LogIn size={18} strokeWidth={2} />
+                            <span>Đăng nhập</span>
+                        </Link>
+                    )}
 
                     {/* Mobile Menu Toggle */}
                     <button
