@@ -53,6 +53,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/actors/active").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/actors/featured").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/movie/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/movie-genres/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/movie-actors/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/user/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/me").hasAnyRole("USER", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/users/me/profile").hasAnyRole("USER", "ADMIN")
