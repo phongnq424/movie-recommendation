@@ -4,8 +4,8 @@ import { CirclePlay, Star } from "lucide-react";
 import { FloatingDock } from "@/components/FloatingDock";
 import { MovieCard } from "@/components/MovieCard";
 import { SiteHeader } from "@/components/SiteHeader";
-import { movieService } from "@/lib/api/movie.service";
-import type { MovieDetailResponse, Movie } from "@/lib/types/movie";
+import { movieService } from "@/services/movie.service";
+import type { MovieDetailResponse, Movie } from "@/types/movie";
 
 const fallbackBackdrop =
   "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1800&auto=format&fit=crop";
@@ -30,7 +30,7 @@ export default async function HomePage() {
     heroDetail = null;
   }
 
-  const heroMovie = heroDetail ?? pickHeroMovie(movies);
+  const heroMovie = heroDetail;
   const listMovies = movies.filter(
     (movie) => movie.publicId !== heroMovie?.publicId
   );
@@ -154,7 +154,7 @@ function HeroSection({
 
         <div className="mt-5 flex flex-wrap items-center gap-3 text-sm font-semibold text-zinc-300">
           <span className="rounded-md bg-yellow-500 px-2 py-1 text-xs font-black text-black">
-            IMDb {(movie.averageRating ?? 0).toFixed(1)}
+            IMDb {(movie.averageRating ?? 0).toFixed(1)} ({movie.ratingCount ?? 0} đánh giá)
           </span>
 
           {movie.releaseYear && <span>{movie.releaseYear}</span>}
@@ -185,7 +185,7 @@ function HeroSection({
           {genres.length > 0
             ? genres.slice(0, 4).map((genre) => (
               <span
-                key={genre.id}
+                key={genre.genrePublicId}
                 className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 backdrop-blur-md"
               >
                 {genre.genreName}
@@ -220,7 +220,7 @@ function HeroSection({
 
         <div className="mt-8 flex flex-wrap items-center gap-4">
           <Link
-            href={`/movies/${movie.slug}`}
+            href={`/movies/${movie.slug}/watch`}
             className="flex items-center gap-3 rounded-2xl bg-[#c91d1d] px-8 py-4 text-base font-bold shadow-xl shadow-red-950/40 transition hover:bg-[#e02727]"
           >
             <CirclePlay size={24} fill="currentColor" />
@@ -249,7 +249,7 @@ function HeroSection({
             <div className="mb-3 flex items-center gap-2 text-yellow-400">
               <Star size={18} fill="currentColor" />
               <span className="font-bold">
-                {(movie.averageRating ?? 0).toFixed(1)}
+                {(movie.averageRating ?? 0).toFixed(1)} ({movie.ratingCount ?? 0})
               </span>
             </div>
 

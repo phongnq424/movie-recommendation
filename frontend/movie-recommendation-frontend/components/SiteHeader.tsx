@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation"; // Thêm usePathname
 import {
     Bell,
     ChevronDown,
@@ -16,9 +16,9 @@ import {
 import { authService } from "@/services/auth.service";
 
 const navItems = [
-    { label: "Trang chủ", href: "/", active: true },
+    { label: "Trang chủ", href: "/" },
     { label: "Phim", href: "/movies" },
-    { label: "Thể loại", href: "/genres", hasDropdown: true },
+    { label: "Thể loại", href: "#", hasDropdown: true },
     { label: "Quốc gia", href: "/countries", hasDropdown: true },
     { label: "Diễn viên", href: "/actors" },
     { label: "Bảng giá", href: "/pricing" },
@@ -27,7 +27,10 @@ const navItems = [
 export function SiteHeader() {
     const [user, setUser] = useState<{ fullName: string; role: string; userPublicId: string } | null>(null);
     const [showDropdown, setShowDropdown] = useState(false);
+    const [genres, setGenres] = useState<{ publicId: string; name: string; slug: string }[]>([]);
+
     const router = useRouter();
+    const pathname = usePathname(); // Lấy đường dẫn hiện tại
 
     useEffect(() => {
         const checkAuth = () => {
@@ -41,6 +44,14 @@ export function SiteHeader() {
         checkAuth();
         window.addEventListener('auth-change', checkAuth);
         return () => window.removeEventListener('auth-change', checkAuth);
+    }, []);
+
+    useEffect(() => {
+        import("@/services/genre.service").then(({ genreService }) => {
+            genreService.getActiveGenres().then((data) => {
+                setGenres(data);
+            }).catch(console.error);
+        });
     }, []);
 
     const handleLogout = async () => {
@@ -71,43 +82,65 @@ export function SiteHeader() {
                     </Link>
 
                     <nav className="hidden items-center gap-6 lg:flex">
-                        {navItems.map((item) => (
-                            <Link
-                                key={item.label}
-                                href={item.href}
-                                className="group relative flex items-center gap-1 py-2 text-sm font-medium transition-colors"
-                            >
-                                <span className={item.active ? "text-white" : "text-zinc-400 group-hover:text-white"}>
-                                    {item.label}
-                                </span>
+                        {navItems.map((item) => {
+                            // Kiểm tra xem item có đang active hay không
+                            const isActive = pathname === item.href || (item.label === "Thể loại" && pathname.startsWith('/movies?genre='));
 
-                                {item.hasDropdown && (
-                                    <ChevronDown
-                                        size={14}
-                                        strokeWidth={2}
-                                        className={`transition-transform duration-200 group-hover:rotate-180 ${item.active
-                                            ? "text-white"
-                                            : "text-zinc-500 group-hover:text-zinc-300"
-                                            }`}
-                                    />
-                                )}
+                            if (item.label === "Thể loại") {
+                                return (
+                                    <div key={item.label} className="group relative flex items-center py-2 cursor-pointer">
+                                        <div className={`flex items-center gap-1 text-sm font-medium transition-colors ${isActive ? "text-white" : "text-zinc-400 group-hover:text-white"}`}>
+                                            {item.label}
+                                            <ChevronDown size={14} strokeWidth={2} className="transition-transform duration-200 group-hover:rotate-180 text-zinc-500 group-hover:text-zinc-300" />
+                                        </div>
 
-                                {/* Indicator cho active item */}
-                                {item.active && (
-                                    <span className="absolute -bottom-1.5 left-1/2 h-[2px] w-6 -translate-x-1/2 rounded-full bg-red-600" />
-                                )}
-                            </Link>
-                        ))}
+                                        <div className="absolute left-0 top-full hidden pt-2 group-hover:block z-50">
+                                            <div className="grid w-[400px] grid-cols-2 gap-2 rounded-xl border border-white/10 bg-[#111114] p-4 shadow-xl shadow-black/50">
+                                                {genres.map(genre => (
+                                                    <Link
+                                                        key={genre.publicId}
+                                                        href={`/movies?genre=${genre.publicId}`}
+                                                        className="rounded-lg px-3 py-2 text-sm text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
+                                                    >
+                                                        {genre.name}
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <Link
+                                    key={item.label}
+                                    href={item.href}
+                                    className="group relative flex items-center gap-1 py-2 text-sm font-medium transition-colors"
+                                >
+                                    <span className={isActive ? "text-white" : "text-zinc-400 group-hover:text-white"}>
+                                        {item.label}
+                                    </span>
+
+                                    {item.hasDropdown && (
+                                        <ChevronDown
+                                            size={14}
+                                            strokeWidth={2}
+                                            className={`transition-transform duration-200 group-hover:rotate-180 ${isActive
+                                                ? "text-white"
+                                                : "text-zinc-500 group-hover:text-zinc-300"
+                                                }`}
+                                        />
+                                    )}
+
+                                </Link>
+                            );
+                        })}
                     </nav>
                 </div>
 
-                {/* Right Actions */}
                 <div className="flex items-center gap-4">
                     {/* Search Bar */}
-                    <form
-                        action="/search"
-                        className="group relative hidden md:block"
-                    >
+                    <form action="/search" className="group relative hidden md:block">
                         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                             <Search size={16} className="text-zinc-400 group-focus-within:text-white transition-colors" />
                         </div>
@@ -118,27 +151,13 @@ export function SiteHeader() {
                         />
                     </form>
 
-                    {/* Action Icons */}
                     <div className="hidden items-center gap-2 md:flex">
-                        <button
-                            type="button"
-                            className="relative flex h-10 w-10 items-center justify-center rounded-full text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
-                            aria-label="Thông báo"
-                        >
+                        <button type="button" className="relative flex h-10 w-10 items-center justify-center rounded-full text-zinc-400 hover:bg-white/10 hover:text-white transition-colors">
                             <Bell size={20} strokeWidth={2} />
                             <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full border-2 border-black bg-red-600" />
                         </button>
-
-                        <button
-                            type="button"
-                            className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
-                            aria-label="Tài khoản"
-                        >
-                            <User size={20} strokeWidth={2} />
-                        </button>
                     </div>
 
-                    {/* Auth Section */}
                     {user ? (
                         <div className="relative hidden md:block">
                             <button
@@ -152,45 +171,23 @@ export function SiteHeader() {
 
                             {showDropdown && (
                                 <div className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-white/10 bg-[#111114] shadow-xl shadow-black/50">
-                                    <Link
-                                        href="/profile"
-                                        onClick={() => setShowDropdown(false)}
-                                        className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
-                                    >
-                                        <Settings size={16} />
-                                        Hồ sơ cá nhân
+                                    <Link href="/profile" onClick={() => setShowDropdown(false)} className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/10 hover:text-white">
+                                        <Settings size={16} /> Hồ sơ cá nhân
                                     </Link>
                                     <button
-                                        onClick={() => {
-                                            setShowDropdown(false);
-                                            handleLogout();
-                                        }}
+                                        onClick={() => { setShowDropdown(false); handleLogout(); }}
                                         className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-red-400 transition-colors hover:bg-white/10 hover:text-red-300"
                                     >
-                                        <LogIn size={16} className="rotate-180" />
-                                        Đăng xuất
+                                        <LogIn size={16} className="rotate-180" /> Đăng xuất
                                     </button>
                                 </div>
                             )}
                         </div>
                     ) : (
-                        <Link
-                            href="/auth/login"
-                            className="hidden md:flex h-10 items-center justify-center gap-2 rounded-full bg-red-600 px-5 text-sm font-semibold text-white transition-all hover:bg-red-700 hover:scale-105 active:scale-95"
-                        >
-                            <LogIn size={18} strokeWidth={2} />
-                            <span>Đăng nhập</span>
+                        <Link href="/auth/login" className="hidden md:flex h-10 items-center justify-center gap-2 rounded-full bg-red-600 px-5 text-sm font-semibold text-white transition-all hover:bg-red-700 hover:scale-105 active:scale-95">
+                            <LogIn size={18} strokeWidth={2} /> <span>Đăng nhập</span>
                         </Link>
                     )}
-
-                    {/* Mobile Menu Toggle */}
-                    <button
-                        type="button"
-                        className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 lg:hidden"
-                        aria-label="Mở menu"
-                    >
-                        <Menu size={20} strokeWidth={2} />
-                    </button>
                 </div>
             </div>
         </header>

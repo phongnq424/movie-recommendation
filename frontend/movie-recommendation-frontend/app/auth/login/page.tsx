@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Mail, Lock, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 import { authService } from '@/services/auth.service';
 import { LoginRequest } from '@/types/auth';
+import Cookies from 'js-cookie';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -41,6 +42,8 @@ export default function LoginPage() {
             const payload = await authService.login(formData);
 
             // Lưu token và thông tin người dùng
+            Cookies.set('access_token', payload.accessToken, { expires: 1, path: '/' });
+            Cookies.set('refresh_token', payload.refreshToken, { expires: 1, path: '/' });
             localStorage.setItem('access_token', payload.accessToken);
             localStorage.setItem('refresh_token', payload.refreshToken);
             localStorage.setItem('user_info', JSON.stringify({

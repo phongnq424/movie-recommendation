@@ -1,4 +1,5 @@
 import axios, { AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
+import Cookies from 'js-cookie';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -13,9 +14,8 @@ const axiosClient = axios.create({
 // 2. Interceptor cho Request: Tự động thêm Access Token
 axiosClient.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
-        // Lấy token từ localStorage hoặc Cookies
-        const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-        
+        const token = Cookies.get('access_token');
+
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -24,25 +24,25 @@ axiosClient.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// 3. Interceptor cho Response: Xử lý lỗi tập trung (ví dụ: Token hết hạn)
+// 3. Interceptor cho Response: Xử lý lỗi tập trung (Token hết hạn)
 axiosClient.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
         const message = error.response?.data?.message || 'Đã có lỗi xảy ra';
-        
+
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
-            const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null;
-            
+            const refreshToken = Cookies.get('refresh_token');
+
             if (refreshToken) {
                 try {
                     const res = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
                     const { accessToken, refreshToken: newRefreshToken } = res.data;
-                    
-                    localStorage.setItem('access_token', accessToken);
-                    localStorage.setItem('refresh_token', newRefreshToken);
-                    
+
+                    Cookies.set('access_token', accessToken, { expires: 1, path: '/' });
+                    Cookies.set('refresh_token', newRefreshToken, { expires: 7, path: '/' });
+
                     originalRequest.headers.Authorization = `Bearer ${accessToken}`;
                     return axiosClient(originalRequest);
                 } catch (refreshError) {
@@ -57,7 +57,7 @@ axiosClient.interceptors.response.use(
                 }
             }
         }
-        
+
         return Promise.reject(new Error(message));
     }
 );

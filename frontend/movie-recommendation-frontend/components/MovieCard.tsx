@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CirclePlay } from "lucide-react";
-import type { Movie } from "@/lib/types/movie";
+import { CirclePlay, Star } from "lucide-react";
+import type { Movie } from "@/types/movie";
 
 const fallbackPoster =
     "https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=700&auto=format&fit=crop";
@@ -31,12 +31,13 @@ export function MovieCard({ movie }: { movie: Movie }) {
                     className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
                 />
 
-                {/* Overlay gradient: Tối hơn ở dưới đáy, và tối toàn bộ khi hover */}
+                {/* Overlay gradient */}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#111114] via-black/20 to-transparent transition-colors duration-300 group-hover:bg-black/40" />
 
                 {/* Badges */}
-                <div className="absolute left-3 top-3 rounded-md bg-yellow-500 px-2 py-1 text-[11px] font-black tracking-wide text-black shadow-sm">
-                    IMDb {(movie.averageRating ?? 0).toFixed(1)}
+                <div className="absolute left-3 top-3 flex items-center gap-1 rounded-md bg-yellow-500 px-2 py-1 text-[11px] font-black tracking-wide text-black shadow-sm">
+                    <Star size={10} fill="currentColor" />
+                    <span>{(movie.averageRating ?? 0).toFixed(1)} ({movie.ratingCount ?? 0})</span>
                 </div>
 
                 {movie.quality && (
@@ -45,7 +46,7 @@ export function MovieCard({ movie }: { movie: Movie }) {
                     </div>
                 )}
 
-                {/* Nút Play: Thêm hiệu ứng bật nảy (spring) nhẹ */}
+                {/* Nút Play */}
                 <div className="absolute left-1/2 top-1/2 grid h-14 w-14 -translate-x-1/2 -translate-y-1/2 scale-75 place-items-center rounded-full bg-red-600 text-white opacity-0 shadow-[0_0_30px_rgba(220,38,38,0.5)] transition-all duration-300 group-hover:scale-100 group-hover:opacity-100">
                     <CirclePlay size={28} fill="currentColor" className="ml-1" />
                 </div>
