@@ -295,4 +295,21 @@ public class MovieService {
                 .trim()
                 .replaceAll("\\s+", "-");
     }
+    @Transactional
+    public MovieResponse increaseViewCount(UUID publicId) {
+        if (publicId == null) {
+            throw new RuntimeException("Movie public ID is required");
+        }
+
+        int updatedRows = movieRepository.incrementViewCountByPublicId(publicId);
+
+        if (updatedRows == 0) {
+            throw new RuntimeException("Movie not found or not published");
+        }
+
+        Movie movie = movieRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new RuntimeException("Movie not found"));
+
+        return MovieResponse.from(movie);
+    }
 }

@@ -113,4 +113,8 @@ public class MovieController {
     ) {
         return movieService.deleteMovies(request.getPublicIds());
     }
+    @PostMapping("/{publicId}/view")
+    public MovieResponse increaseViewCount(@PathVariable UUID publicId) {
+        return movieService.increaseViewCount(publicId);
+    }
 }
