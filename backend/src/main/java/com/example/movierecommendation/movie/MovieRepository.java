@@ -2,6 +2,7 @@ package com.example.movierecommendation.movie;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +26,41 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
 
     List<Movie> findByIdNotInOrderByAverageRatingDescRatingCountDesc(
             List<Long> movieIds,
+            Pageable pageable
+    );
+    @Query("""
+        SELECT m
+        FROM Movie m
+        WHERE m.status = 'PUBLISHED'
+        ORDER BY
+            COALESCE(m.viewCount, 0) DESC,
+            COALESCE(m.averageRating, 0) DESC,
+            COALESCE(m.ratingCount, 0) DESC
+    """)
+    List<Movie> findPopularPublishedMovies(Pageable pageable);
+
+    @Query("""
+        SELECT m
+        FROM Movie m
+        WHERE m.status = 'PUBLISHED'
+        ORDER BY
+            COALESCE(m.releaseYear, 0) DESC,
+            m.createdAt DESC
+    """)
+    List<Movie> findFreshPublishedMovies(Pageable pageable);
+
+    @Query("""
+        SELECT m
+        FROM Movie m
+        WHERE m.status = 'PUBLISHED'
+          AND m.id NOT IN :excludedMovieIds
+        ORDER BY
+            COALESCE(m.viewCount, 0) DESC,
+            COALESCE(m.averageRating, 0) DESC,
+            COALESCE(m.ratingCount, 0) DESC
+    """)
+    List<Movie> findPopularPublishedMoviesExcluding(
+            List<Long> excludedMovieIds,
             Pageable pageable
     );
 }
