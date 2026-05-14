@@ -1,5 +1,6 @@
 import axiosClient from './axios';
 import { LoginRequest, RegisterRequest, AuthResponse } from '@/types/auth';
+import Cookies from "js-cookie";
 
 export const authService = {
   async login(credentials: LoginRequest): Promise<AuthResponse> {
@@ -28,10 +29,10 @@ export const authService = {
 
   async logout(): Promise<void> {
     try {
-      const refreshToken = typeof window !== 'undefined' 
-        ? localStorage.getItem('refresh_token') 
+      const refreshToken = typeof window !== 'undefined'
+        ? localStorage.getItem('refresh_token')
         : null;
-      
+
       if (refreshToken) {
         await axiosClient.post('/auth/logout', { refreshToken });
       }
@@ -47,7 +48,7 @@ export const authService = {
   },
 
   getToken() {
-    return typeof window !== 'undefined' 
+    return typeof window !== 'undefined'
       ? localStorage.getItem('access_token')
       : null;
   },
@@ -63,6 +64,8 @@ export const authService = {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user_info');
+      Cookies.remove('access_token', { path: '/' });
+      Cookies.remove('refresh_token', { path: '/' });
     }
   },
 
