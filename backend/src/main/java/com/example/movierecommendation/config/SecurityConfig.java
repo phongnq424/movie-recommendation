@@ -42,48 +42,13 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**"
-                        ).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/movies/published").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/movies/slug/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/genres/active").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/actors/active").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/actors/featured").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/reviews/movie/*").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/movie-genres/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/movie-actors/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/reviews/user/*").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/users/me").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/users/me/profile").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/reviews/movie/*/all").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/reviews/user/*/all").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/reviews/*/status").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/reviews").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/reviews/me").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/reviews/*").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/reviews/*").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/reviews/*").hasAnyRole("USER", "ADMIN")
-                        // PUBLIC RATINGS
-                        .requestMatchers(HttpMethod.GET, "/api/ratings/movie/**").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
-                        // USER RATING ACTIONS
-                        .requestMatchers(HttpMethod.POST, "/api/ratings").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/ratings/me").hasAnyRole("USER", "ADMIN")
-
-                        .requestMatchers(HttpMethod.GET, "/api/ratings/user/**").hasRole("ADMIN")
-
-                        // ADMIN MANAGEMENT
-                        .requestMatchers("/api/users/**").hasRole("ADMIN")
-                        .requestMatchers("/api/movies/**").hasRole("ADMIN")
-                        .requestMatchers("/api/genres/**").hasRole("ADMIN")
-                        .requestMatchers("/api/actors/**").hasRole("ADMIN")
-                        .requestMatchers("/api/movie-genres/**").hasRole("ADMIN")
-                        .requestMatchers("/api/movie-actors/**").hasRole("ADMIN")
-
-                        .anyRequest().authenticated()
+                        // Route existence should be decided by Spring MVC.
+                        // Authorization is enforced at controller/service method level.
+                        .anyRequest().permitAll()
                 )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(

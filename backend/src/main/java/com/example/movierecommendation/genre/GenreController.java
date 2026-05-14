@@ -5,6 +5,7 @@ import com.example.movierecommendation.genre.dto.GenreRequest;
 import com.example.movierecommendation.genre.dto.GenreResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,31 +19,39 @@ public class GenreController {
 
     private final GenreService genreService;
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<GenreResponse> getAllGenres() {
         return genreService.getAllGenres();
     }
 
+    /**
+     * Public API for frontend movie browsing/filtering.
+     */
     @GetMapping("/active")
     public List<GenreResponse> getActiveGenres() {
         return genreService.getActiveGenres();
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/search")
     public List<GenreResponse> searchGenres(@RequestParam String keyword) {
         return genreService.searchGenres(keyword);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{publicId}")
     public GenreResponse getGenreByPublicId(@PathVariable UUID publicId) {
         return genreService.getGenreByPublicId(publicId);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public GenreResponse createGenre(@Valid @RequestBody GenreRequest request) {
         return genreService.createGenre(request);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/bulk")
     public List<GenreResponse> createGenres(
             @Valid @RequestBody List<GenreRequest> requests
@@ -50,6 +59,7 @@ public class GenreController {
         return genreService.createGenres(requests);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{publicId}")
     public GenreResponse updateGenre(
             @PathVariable UUID publicId,
@@ -58,6 +68,7 @@ public class GenreController {
         return genreService.updateGenre(publicId, request);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{publicId}/status")
     public GenreResponse updateGenreStatus(
             @PathVariable UUID publicId,
@@ -66,11 +77,13 @@ public class GenreController {
         return genreService.updateGenreStatus(publicId, status);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{publicId}")
     public GenreResponse deleteGenre(@PathVariable UUID publicId) {
         return genreService.deleteGenre(publicId);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/bulk-delete")
     public List<GenreResponse> deleteGenres(
             @Valid @RequestBody BulkGenreDeleteRequest request

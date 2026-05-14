@@ -5,6 +5,7 @@ import com.example.movierecommendation.moviegenre.dto.MovieGenreResponse;
 import com.example.movierecommendation.moviegenre.dto.SetMovieGenresRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +19,7 @@ public class MovieGenreController {
 
     private final MovieGenreService movieGenreService;
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public MovieGenreResponse addGenreToMovie(
             @Valid @RequestBody MovieGenreRequest request
@@ -25,6 +27,9 @@ public class MovieGenreController {
         return movieGenreService.addGenreToMovie(request);
     }
 
+    /**
+     * Public API: lấy genres của một phim.
+     */
     @GetMapping("/movie/{moviePublicId}")
     public List<MovieGenreResponse> getGenresByMovie(
             @PathVariable UUID moviePublicId
@@ -32,6 +37,9 @@ public class MovieGenreController {
         return movieGenreService.getGenresByMovie(moviePublicId);
     }
 
+    /**
+     * Public API: lấy phim theo genre.
+     */
     @GetMapping("/genre/{genrePublicId}")
     public List<MovieGenreResponse> getMoviesByGenre(
             @PathVariable UUID genrePublicId
@@ -39,6 +47,10 @@ public class MovieGenreController {
         return movieGenreService.getMoviesByGenre(genrePublicId);
     }
 
+    /**
+     * Admin API: remove genre khỏi movie.
+     */
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/movie/{moviePublicId}/genre/{genrePublicId}")
     public String removeGenreFromMovie(
             @PathVariable UUID moviePublicId,
@@ -49,9 +61,9 @@ public class MovieGenreController {
     }
 
     /**
-     * Bulk set genres cho một movie.
-     * Đây là API admin nên dùng khi save form movie genres.
+     * Admin API: bulk set genres cho một movie.
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/movie/{moviePublicId}")
     public List<MovieGenreResponse> setGenresForMovie(
             @PathVariable UUID moviePublicId,
