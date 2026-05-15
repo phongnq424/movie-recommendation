@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Flag, Share2, Star } from "lucide-react";
 import { movieService } from "@/services/movie.service";
+import { YoutubeMoviePlayer } from "@/components/YoutubeMoviePlayer";
+
 
 export default async function MovieWatchPage({
     params,
@@ -56,14 +58,12 @@ export default async function MovieWatchPage({
             </header>
 
             {/* Video Player */}
-            <section className="mx-auto w-full max-w-[1480px]">
-                <div className="relative aspect-video w-full bg-black shadow-2xl">
+            <section className="mx-auto w-full max-w-[1480px] px-4 sm:px-6 lg:px-8">
+                <div className="relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-xl">
                     {movie.movieUrl ? (
-                        <iframe
-                            src={movie.movieUrl}
-                            className="h-full w-full border-0"
-                            allowFullScreen
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        <YoutubeMoviePlayer
+                            movieUrl={movie.movieUrl}
+                            moviePublicId={movie.publicId}
                         />
                     ) : (
                         <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-zinc-900/50 text-zinc-500">

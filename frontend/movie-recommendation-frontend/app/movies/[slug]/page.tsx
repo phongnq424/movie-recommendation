@@ -5,6 +5,9 @@ import { Calendar, Clock, Film, Play, Star } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { MovieRating } from "@/components/MovieRating";
 import { movieService } from "@/services/movie.service";
+import { MovieReviews } from "@/components/MovieReviews";
+import { MovieTrailer } from "@/components/MovieTrailer";
+
 
 const fallbackBackdrop =
     "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1800&auto=format&fit=crop";
@@ -140,14 +143,10 @@ export default async function MovieDetailPage({
                                     Xem phim
                                 </Link>
                                 {movie.trailerUrl && (
-                                    <a
-                                        href={movie.trailerUrl}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-8 py-4 text-lg font-bold text-white backdrop-blur-md transition hover:bg-white/20 active:scale-95"
-                                    >
-                                        Trailer
-                                    </a>
+                                    <MovieTrailer
+                                        trailerUrl={movie.trailerUrl}
+                                        movieTitle={movie.title}
+                                    />
                                 )}
                             </div>
 
@@ -193,6 +192,15 @@ export default async function MovieDetailPage({
                                 )}
                             </Link>
                         ))}
+                    </div>
+                </section>
+            )}
+
+            {/* Reviews Section */}
+            {movie.publicId && (
+                <section className="mx-auto max-w-[1480px] px-5 pb-20 sm:px-8 lg:px-12">
+                    <div className="max-w-4xl">
+                        <MovieReviews moviePublicId={movie.publicId} />
                     </div>
                 </section>
             )}

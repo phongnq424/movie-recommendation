@@ -58,4 +58,29 @@ export const movieService = {
         const response = await axiosClient.get(`/movies/slug/${slug}/detail`);
         return response.data;
     },
+
+    async updateMovieStatus(publicId: string, status: string): Promise<Movie> {
+        const response = await axiosClient.put<Movie>(`/movies/${publicId}/status?status=${status}`);
+        return response.data;
+    },
+
+    async setGenresForMovie(moviePublicId: string, genrePublicIds: string[]): Promise<any> {
+        const response = await axiosClient.put(`/movie-genres/movie/${moviePublicId}`, { genrePublicIds });
+        return response.data;
+    },
+
+    async setActorsForMovie(moviePublicId: string, actors: any[]): Promise<any> {
+        const response = await axiosClient.put(`/movie-actors/movie/${moviePublicId}`, { actors });
+        return response.data;
+    },
+
+    async getMovieDetail(publicId: string): Promise<MovieDetailResponse> {
+        const response = await axiosClient.get<MovieDetailResponse>(`/movies/${publicId}/detail`);
+        return response.data;
+    },
+
+    async increaseViewCount(publicId: string): Promise<Movie> {
+        const response = await axiosClient.post<Movie>(`/movies/${publicId}/view`);
+        return response.data;
+    }
 };
