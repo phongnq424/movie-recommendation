@@ -19,9 +19,7 @@ const navItems = [
     { label: "Trang chủ", href: "/" },
     { label: "Phim", href: "/movies" },
     { label: "Thể loại", href: "#", hasDropdown: true },
-    { label: "Quốc gia", href: "/countries", hasDropdown: true },
     { label: "Diễn viên", href: "/actors" },
-    { label: "Bảng giá", href: "/pricing" },
 ];
 
 export function SiteHeader() {

@@ -18,6 +18,8 @@ export const metadata: Metadata = {
   description: "Web xem phim và nhận đề xuất phim dựa trên sở thích của bạn",
 };
 
+import Providers from "@/components/Providers";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,7 +30,9 @@ export default function RootLayout({
       lang="vi"
       className={`${lexend.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }
