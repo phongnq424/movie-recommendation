@@ -1,4 +1,5 @@
 import axiosClient from "./axios";
+import { Actor } from "../types/actor";
 
 export const actorService = {
     async getMoviesByActor(actorPublicId: string) {
@@ -24,5 +25,9 @@ export const actorService = {
     async deleteActor(publicId: string) {
         const response = await axiosClient.delete(`/actors/${publicId}`);
         return response.data;
-    }
+    },
+    async getAllActiveActors(): Promise<Actor[]> {
+        const response = await axiosClient.get<Actor[]>("/actors/active");
+        return response.data;
+    },
 };

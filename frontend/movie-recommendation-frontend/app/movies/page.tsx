@@ -50,9 +50,9 @@ export default async function MoviesPage({
       <div className="mx-auto max-w-[1460px]">
         <div className="mb-8">
           <h1 className="text-3xl font-black md:text-4xl">
-            {genreId ? (filterName ? `Phim thể loại: ${filterName}` : "Phim theo thể loại") 
-             : actorId ? (filterName ? `Phim của diễn viên: ${filterName}` : "Phim của diễn viên")
-             : "Tất cả phim"}
+            {genreId ? (filterName ? `Phim thể loại: ${filterName}` : "Phim theo thể loại")
+              : actorId ? (filterName ? `Phim của diễn viên: ${filterName}` : "Phim của diễn viên")
+                : "Tất cả phim"}
           </h1>
           <p className="mt-2 text-zinc-400">
             Hiển thị {movies.length} kết quả
