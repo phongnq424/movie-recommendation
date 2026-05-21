@@ -12,8 +12,14 @@ public class RecommendationWeightResolver {
                 ? 0
                 : context.getUserRatings().size();
 
-        if (ratingCount == 0) {
+        int interactionCount = context.getInteractionCount();
+
+        if (ratingCount == 0 && interactionCount == 0) {
             return RecommendationWeights.newUser();
+        }
+
+        if (ratingCount == 0) {
+            return RecommendationWeights.lightUser();
         }
 
         if (ratingCount < 5) {

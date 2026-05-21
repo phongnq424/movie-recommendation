@@ -7,10 +7,7 @@ import com.example.movierecommendation.moviegenre.MovieGenre;
 import com.example.movierecommendation.moviegenre.MovieGenreRepository;
 import com.example.movierecommendation.rating.Rating;
 import com.example.movierecommendation.rating.RatingRepository;
-import com.example.movierecommendation.recommendation.dto.RecommendationContext;
-import com.example.movierecommendation.recommendation.dto.RecommendationResponse;
-import com.example.movierecommendation.recommendation.dto.RecommendationScoreBreakdown;
-import com.example.movierecommendation.recommendation.dto.RecommendationWeights;
+import com.example.movierecommendation.recommendation.dto.*;
 import com.example.movierecommendation.reviewanalysis.ReviewAnalysisRepository;
 import com.example.movierecommendation.user.User;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +21,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class RecommendationScoreCalculator {
 
-    private static final double LIKED_RATING_THRESHOLD = 4.0;
     private static final double MIN_SIMILARITY = 0.30;
 
     private final UserSimilarityCalculator userSimilarityCalculator;
@@ -32,6 +28,7 @@ public class RecommendationScoreCalculator {
     private final MovieGenreRepository movieGenreRepository;
     private final MovieActorRepository movieActorRepository;
     private final ReviewAnalysisRepository reviewAnalysisRepository;
+    private final UserMovieInterestService userMovieInterestService;
 
     public RecommendationContext buildContext(User user, List<Movie> candidates) {
         List<Rating> userRatings = ratingRepository.findByUserId(user.getId());
@@ -43,8 +40,10 @@ public class RecommendationScoreCalculator {
         Map<Long, Set<Long>> candidateGenreIds = loadCandidateGenreIds(candidateMovieIds);
         Map<Long, Set<Long>> candidateActorIds = loadCandidateActorIds(candidateMovieIds);
 
-        Map<Long, Double> userGenreWeights = buildUserGenreWeights(userRatings);
-        Map<Long, Double> userActorWeights = buildUserActorWeights(userRatings);
+        UserMovieInterestProfile interestProfile = userMovieInterestService.build(user.getId(), userRatings);
+
+        Map<Long, Double> userGenreWeights = buildUserGenreWeights(interestProfile.getMovieInterestScores());
+        Map<Long, Double> userActorWeights = buildUserActorWeights(interestProfile.getMovieInterestScores());
 
         CollaborativeResult collaborativeResult = calculateCollaborativeScores(
                 user,
@@ -68,6 +67,7 @@ public class RecommendationScoreCalculator {
 
         return RecommendationContext.builder()
                 .userRatings(userRatings)
+                .movieInterestScores(interestProfile.getMovieInterestScores())
                 .userGenreWeights(userGenreWeights)
                 .userActorWeights(userActorWeights)
                 .candidateGenreIds(candidateGenreIds)
@@ -75,6 +75,7 @@ public class RecommendationScoreCalculator {
                 .collaborativeScores(collaborativeResult.collaborativeScores())
                 .sentimentScores(sentimentScores)
                 .similarUserCount(collaborativeResult.similarUserCount())
+                .interactionCount(interestProfile.getInteractionCount())
                 .maxRatingCount(maxRatingCount)
                 .maxViewCount(maxViewCount)
                 .currentYear(Year.now().getValue())
@@ -100,6 +101,7 @@ public class RecommendationScoreCalculator {
 
         return RecommendationContext.builder()
                 .userRatings(List.of())
+                .movieInterestScores(Map.of())
                 .userGenreWeights(Map.of())
                 .userActorWeights(Map.of())
                 .candidateGenreIds(loadCandidateGenreIds(candidateMovieIds))
@@ -107,6 +109,7 @@ public class RecommendationScoreCalculator {
                 .collaborativeScores(Map.of())
                 .sentimentScores(loadSentimentScores(candidateMovieIds))
                 .similarUserCount(0)
+                .interactionCount(0)
                 .maxRatingCount(maxRatingCount)
                 .maxViewCount(maxViewCount)
                 .currentYear(Year.now().getValue())
@@ -253,62 +256,36 @@ public class RecommendationScoreCalculator {
         return clamp(Math.exp(-age / 8.0));
     }
 
-    private Map<Long, Double> buildUserGenreWeights(List<Rating> userRatings) {
-        List<Rating> likedRatings = userRatings.stream()
-                .filter(rating -> safeDouble(rating.getRatingValue()) >= LIKED_RATING_THRESHOLD)
-                .toList();
-
-        if (likedRatings.isEmpty()) {
+    private Map<Long, Double> buildUserGenreWeights(Map<Long, Double> movieInterestScores) {
+        if (movieInterestScores == null || movieInterestScores.isEmpty()) {
             return Map.of();
         }
 
-        List<Long> likedMovieIds = likedRatings.stream()
-                .map(rating -> rating.getMovie().getId())
-                .toList();
-
-        Map<Long, Double> ratingByMovieId = likedRatings.stream()
-                .collect(Collectors.toMap(
-                        rating -> rating.getMovie().getId(),
-                        rating -> safeDouble(rating.getRatingValue()) / 5.0,
-                        Double::sum
-                ));
+        List<Long> movieIds = new ArrayList<>(movieInterestScores.keySet());
 
         Map<Long, Double> weights = new HashMap<>();
 
-        for (MovieGenre movieGenre : movieGenreRepository.findByMovieIds(likedMovieIds)) {
+        for (MovieGenre movieGenre : movieGenreRepository.findByMovieIds(movieIds)) {
             Long movieId = movieGenre.getMovie().getId();
             Long genreId = movieGenre.getGenre().getId();
 
-            double weight = ratingByMovieId.getOrDefault(movieId, 0.0);
+            double weight = movieInterestScores.getOrDefault(movieId, 0.0);
             weights.merge(genreId, weight, Double::sum);
         }
 
         return weights;
     }
 
-    private Map<Long, Double> buildUserActorWeights(List<Rating> userRatings) {
-        List<Rating> likedRatings = userRatings.stream()
-                .filter(rating -> safeDouble(rating.getRatingValue()) >= LIKED_RATING_THRESHOLD)
-                .toList();
-
-        if (likedRatings.isEmpty()) {
+    private Map<Long, Double> buildUserActorWeights(Map<Long, Double> movieInterestScores) {
+        if (movieInterestScores == null || movieInterestScores.isEmpty()) {
             return Map.of();
         }
 
-        List<Long> likedMovieIds = likedRatings.stream()
-                .map(rating -> rating.getMovie().getId())
-                .toList();
-
-        Map<Long, Double> ratingByMovieId = likedRatings.stream()
-                .collect(Collectors.toMap(
-                        rating -> rating.getMovie().getId(),
-                        rating -> safeDouble(rating.getRatingValue()) / 5.0,
-                        Double::sum
-                ));
+        List<Long> movieIds = new ArrayList<>(movieInterestScores.keySet());
 
         Map<Long, Double> weights = new HashMap<>();
 
-        for (MovieActor movieActor : movieActorRepository.findByMovieIds(likedMovieIds)) {
+        for (MovieActor movieActor : movieActorRepository.findByMovieIds(movieIds)) {
             if (!isImportantActor(movieActor)) {
                 continue;
             }
@@ -316,7 +293,7 @@ public class RecommendationScoreCalculator {
             Long movieId = movieActor.getMovie().getId();
             Long actorId = movieActor.getActor().getId();
 
-            double weight = ratingByMovieId.getOrDefault(movieId, 0.0);
+            double weight = movieInterestScores.getOrDefault(movieId, 0.0);
             weights.merge(actorId, weight, Double::sum);
         }
 

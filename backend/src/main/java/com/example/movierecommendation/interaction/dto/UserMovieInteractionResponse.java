@@ -29,7 +29,11 @@ public class UserMovieInteractionResponse {
 
     private Double progressPercent;
 
+    private Boolean completed;
+
     private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
 
     public static UserMovieInteractionResponse from(UserMovieInteraction interaction) {
         return UserMovieInteractionResponse.builder()
@@ -41,7 +45,9 @@ public class UserMovieInteractionResponse {
                 .watchedSeconds(interaction.getWatchedSeconds())
                 .durationSeconds(interaction.getDurationSeconds())
                 .progressPercent(interaction.getProgressPercent())
+                .completed(interaction.getCompleted())
                 .createdAt(interaction.getCreatedAt())
+                .updatedAt(interaction.getUpdatedAt())
                 .build();
     }
 }

@@ -17,6 +17,8 @@ public class RecommendationContext {
     private Map<Long, Double> userGenreWeights;
     private Map<Long, Double> userActorWeights;
 
+    private Map<Long, Double> movieInterestScores;
+
     private Map<Long, Set<Long>> candidateGenreIds;
     private Map<Long, Set<Long>> candidateActorIds;
 
@@ -24,6 +26,7 @@ public class RecommendationContext {
     private Map<Long, Double> sentimentScores;
 
     private int similarUserCount;
+    private int interactionCount;
 
     private int maxRatingCount;
     private long maxViewCount;

@@ -34,8 +34,8 @@ public interface MovieActorRepository extends JpaRepository<MovieActor, Long> {
         WHERE ma.actor.id IN :actorIds
           AND ma.movie.status = 'PUBLISHED'
         ORDER BY
-            COALESCE(ma.movie.averageRating, 0) DESC,
-            COALESCE(ma.movie.ratingCount, 0) DESC
+            ma.movie.averageRating DESC,
+            ma.movie.ratingCount DESC
     """)
     List<Movie> findPublishedMoviesByActorIds(
             @Param("actorIds") List<Long> actorIds,

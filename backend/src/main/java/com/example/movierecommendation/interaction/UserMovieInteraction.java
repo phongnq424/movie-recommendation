@@ -8,7 +8,12 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "user_movie_interactions")
+@Table(
+        name = "user_movie_interactions",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"user_id", "movie_id"})
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -31,7 +36,11 @@ public class UserMovieInteraction {
 
     private Double progressPercent;
 
+    private Boolean completed;
+
     private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
@@ -47,6 +56,20 @@ public class UserMovieInteraction {
             this.value = 0.0;
         }
 
+        if (this.progressPercent == null) {
+            this.progressPercent = 0.0;
+        }
+
+        if (this.completed == null) {
+            this.completed = false;
+        }
+
         this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    public void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 }

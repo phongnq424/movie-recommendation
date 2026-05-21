@@ -3,6 +3,7 @@ package com.example.movierecommendation.interaction;
 import com.example.movierecommendation.interaction.dto.TrackInteractionRequest;
 import com.example.movierecommendation.interaction.dto.UserMovieInteractionResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,10 +33,12 @@ public class UserMovieInteractionController {
     }
 
     @GetMapping("/me/movies/{moviePublicId}")
-    public List<UserMovieInteractionResponse> getMyMovieInteractions(
+    public ResponseEntity<UserMovieInteractionResponse> getMyMovieInteractions(
             @PathVariable UUID moviePublicId,
             Authentication authentication
     ) {
-        return interactionService.getMyMovieInteractions(moviePublicId, authentication);
+        return interactionService.getMyMovieInteractions(moviePublicId, authentication)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

@@ -12,6 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -30,17 +31,22 @@ public class UserMovieInteractionService {
         Movie movie = movieRepository.findByPublicId(moviePublicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Movie not found"));
 
-        User user = resolveUser(authentication);
+        User user = resolveRequiredUser(authentication);
 
-        UserMovieInteraction interaction = UserMovieInteraction.builder()
-                .movie(movie)
-                .user(user)
-                .interactionType(request.getInteractionType())
-                .value(request.getValue())
-                .watchedSeconds(request.getWatchedSeconds())
-                .durationSeconds(request.getDurationSeconds())
-                .progressPercent(request.getProgressPercent())
-                .build();
+        UserMovieInteraction interaction = interactionRepository
+                .findByUserIdAndMovieId(user.getId(), movie.getId())
+                .orElseGet(() -> UserMovieInteraction.builder()
+                        .movie(movie)
+                        .user(user)
+                        .interactionType("VIEW_DETAIL")
+                        .value(0.0)
+                        .watchedSeconds(0)
+                        .durationSeconds(null)
+                        .progressPercent(0.0)
+                        .completed(false)
+                        .build());
+
+        updateInteraction(interaction, request);
 
         UserMovieInteraction savedInteraction = interactionRepository.save(interaction);
 
@@ -56,7 +62,7 @@ public class UserMovieInteractionService {
                 .toList();
     }
 
-    public List<UserMovieInteractionResponse> getMyMovieInteractions(
+    public Optional<UserMovieInteractionResponse> getMyMovieInteractions(
             UUID moviePublicId,
             Authentication authentication
     ) {
@@ -66,19 +72,110 @@ public class UserMovieInteractionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Movie not found"));
 
         return interactionRepository.findByUserIdAndMovieId(user.getId(), movie.getId())
-                .stream()
-                .map(UserMovieInteractionResponse::from)
-                .toList();
+                .map(UserMovieInteractionResponse::from);
     }
 
-    private User resolveUser(Authentication authentication) {
-        if (authentication == null || authentication.getName() == null) {
-            return null;
+    private void updateInteraction(
+            UserMovieInteraction interaction,
+            TrackInteractionRequest request
+    ) {
+        String newType = request.getInteractionType();
+
+        if (newType != null && shouldUpdateInteractionType(interaction, newType)) {
+            interaction.setInteractionType(newType);
         }
 
-        UUID userPublicId = UUID.fromString(authentication.getName());
+        if (request.getValue() != null) {
+            Double oldValue = interaction.getValue();
 
-        return userRepository.findByPublicId(userPublicId).orElse(null);
+            if (oldValue == null || request.getValue() > oldValue) {
+                interaction.setValue(request.getValue());
+            }
+        }
+
+        if (request.getDurationSeconds() != null) {
+            interaction.setDurationSeconds(request.getDurationSeconds());
+        }
+
+        if (request.getWatchedSeconds() != null) {
+            Integer oldWatchedSeconds = interaction.getWatchedSeconds();
+
+            if (oldWatchedSeconds == null || request.getWatchedSeconds() > oldWatchedSeconds) {
+                interaction.setWatchedSeconds(request.getWatchedSeconds());
+            }
+        }
+
+        if (request.getProgressPercent() != null) {
+            Double oldProgress = interaction.getProgressPercent();
+
+            if (oldProgress == null || request.getProgressPercent() > oldProgress) {
+                interaction.setProgressPercent(request.getProgressPercent());
+            }
+        }
+
+        if ("FINISH_WATCHING".equals(newType)) {
+            interaction.setCompleted(true);
+            interaction.setProgressPercent(100.0);
+            interaction.setValue(1.0);
+            interaction.setInteractionType("FINISH_WATCHING");
+            return;
+        }
+
+        if (interaction.getProgressPercent() != null && interaction.getProgressPercent() >= 95) {
+            interaction.setCompleted(true);
+            interaction.setProgressPercent(100.0);
+            interaction.setValue(1.0);
+            interaction.setInteractionType("FINISH_WATCHING");
+        }
+    }
+
+    private boolean shouldUpdateInteractionType(
+            UserMovieInteraction interaction,
+            String newType
+    ) {
+        if ("FINISH_WATCHING".equals(interaction.getInteractionType())) {
+            return false;
+        }
+
+        if (Boolean.TRUE.equals(interaction.getCompleted())) {
+            return false;
+        }
+
+        if ("FINISH_WATCHING".equals(newType)) {
+            return true;
+        }
+
+        if ("WATCH_75_PERCENT".equals(newType)) {
+            return true;
+        }
+
+        if ("WATCH_50_PERCENT".equals(newType)) {
+            return !"WATCH_75_PERCENT".equals(interaction.getInteractionType());
+        }
+
+        if ("WATCH_25_PERCENT".equals(newType)) {
+            return interaction.getInteractionType() == null
+                    || "VIEW_DETAIL".equals(interaction.getInteractionType())
+                    || "PLAY".equals(interaction.getInteractionType())
+                    || "PAUSE".equals(interaction.getInteractionType());
+        }
+
+        if ("PAUSE".equals(newType)) {
+            return interaction.getInteractionType() == null
+                    || "VIEW_DETAIL".equals(interaction.getInteractionType())
+                    || "PLAY".equals(interaction.getInteractionType());
+        }
+
+        if ("PLAY".equals(newType)) {
+            return interaction.getInteractionType() == null
+                    || "VIEW_DETAIL".equals(interaction.getInteractionType());
+        }
+
+        if ("VIEW_DETAIL".equals(newType)) {
+            return interaction.getInteractionType() == null;
+        }
+
+        return interaction.getInteractionType() == null;
     }
 
     private User resolveRequiredUser(Authentication authentication) {

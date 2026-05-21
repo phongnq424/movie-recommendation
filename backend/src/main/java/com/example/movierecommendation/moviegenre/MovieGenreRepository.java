@@ -36,8 +36,8 @@ public interface MovieGenreRepository extends JpaRepository<MovieGenre, Long> {
         WHERE mg.genre.id IN :genreIds
           AND mg.movie.status = 'PUBLISHED'
         ORDER BY
-            COALESCE(mg.movie.averageRating, 0) DESC,
-            COALESCE(mg.movie.ratingCount, 0) DESC
+            mg.movie.averageRating DESC,
+            mg.movie.ratingCount DESC
     """)
     List<Movie> findPublishedMoviesByGenreIds(
             @Param("genreIds") List<Long> genreIds,

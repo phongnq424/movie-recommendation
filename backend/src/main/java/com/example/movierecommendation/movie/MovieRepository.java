@@ -35,9 +35,9 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
         FROM Movie m
         WHERE m.status = 'PUBLISHED'
         ORDER BY
-            COALESCE(m.viewCount, 0) DESC,
-            COALESCE(m.averageRating, 0) DESC,
-            COALESCE(m.ratingCount, 0) DESC
+            m.viewCount DESC,
+            m.averageRating DESC,
+            m.ratingCount DESC
     """)
     List<Movie> findPopularPublishedMovies(Pageable pageable);
 
@@ -46,7 +46,7 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
         FROM Movie m
         WHERE m.status = 'PUBLISHED'
         ORDER BY
-            COALESCE(m.releaseYear, 0) DESC,
+            m.releaseYear DESC,
             m.createdAt DESC
     """)
     List<Movie> findFreshPublishedMovies(Pageable pageable);
@@ -57,9 +57,9 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
         WHERE m.status = 'PUBLISHED'
           AND m.id NOT IN :excludedMovieIds
         ORDER BY
-            COALESCE(m.viewCount, 0) DESC,
-            COALESCE(m.averageRating, 0) DESC,
-            COALESCE(m.ratingCount, 0) DESC
+            m.viewCount DESC,
+            m.averageRating DESC,
+            m.ratingCount DESC
     """)
     List<Movie> findPopularPublishedMoviesExcluding(
             List<Long> excludedMovieIds,

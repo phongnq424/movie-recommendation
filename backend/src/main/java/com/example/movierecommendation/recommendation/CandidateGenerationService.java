@@ -8,11 +8,13 @@ import com.example.movierecommendation.moviegenre.MovieGenre;
 import com.example.movierecommendation.moviegenre.MovieGenreRepository;
 import com.example.movierecommendation.rating.Rating;
 import com.example.movierecommendation.rating.RatingRepository;
+import com.example.movierecommendation.recommendation.dto.UserMovieInterestProfile;
 import com.example.movierecommendation.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Pageable;
+
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -30,19 +32,34 @@ public class CandidateGenerationService {
     private final MovieGenreRepository movieGenreRepository;
     private final MovieActorRepository movieActorRepository;
     private final UserSimilarityCalculator userSimilarityCalculator;
+    private final UserMovieInterestService userMovieInterestService;
 
     public List<Movie> generateCandidates(User user, int candidateLimit) {
         List<Rating> userRatings = ratingRepository.findByUserId(user.getId());
 
-        Set<Long> excludedMovieIds = userRatings.stream()
+        UserMovieInterestProfile interestProfile = userMovieInterestService.build(user.getId(), userRatings);
+        Map<Long, Double> movieInterestScores = interestProfile.getMovieInterestScores();
+
+        Set<Long> excludedMovieIds = new HashSet<>();
+
+        excludedMovieIds.addAll(userRatings.stream()
                 .map(rating -> rating.getMovie().getId())
-                .collect(Collectors.toSet());
+                .collect(Collectors.toSet()));
+
+        excludedMovieIds.addAll(movieInterestScores.entrySet()
+                .stream()
+                .filter(entry -> entry.getValue() >= 0.85)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet()));
 
         Map<Long, Movie> candidateMap = new LinkedHashMap<>();
 
+        if (!movieInterestScores.isEmpty()) {
+            addGenreCandidatesFromInterest(movieInterestScores, candidateMap, candidateLimit);
+            addActorCandidatesFromInterest(movieInterestScores, candidateMap, candidateLimit);
+        }
+
         if (!userRatings.isEmpty()) {
-            addGenreCandidates(userRatings, candidateMap, candidateLimit);
-            addActorCandidates(userRatings, candidateMap, candidateLimit);
             addCollaborativeCandidates(user, userRatings, candidateMap, candidateLimit);
         }
 
@@ -70,64 +87,67 @@ public class CandidateGenerationService {
                 .toList();
     }
 
-    private void addGenreCandidates(
-            List<Rating> userRatings,
+    private void addGenreCandidatesFromInterest(
+            Map<Long, Double> movieInterestScores,
             Map<Long, Movie> candidateMap,
             int candidateLimit
     ) {
-        List<Long> likedMovieIds = userRatings.stream()
-                .filter(rating -> safeDouble(rating.getRatingValue()) >= LIKED_RATING_THRESHOLD)
-                .map(rating -> rating.getMovie().getId())
+        List<Long> interestedMovieIds = movieInterestScores.entrySet()
+                .stream()
+                .filter(entry -> entry.getValue() >= 0.35)
+                .map(Map.Entry::getKey)
                 .toList();
 
-        if (likedMovieIds.isEmpty()) {
+        if (interestedMovieIds.isEmpty()) {
             return;
         }
 
-        List<Long> likedGenreIds = movieGenreRepository.findByMovieIds(likedMovieIds)
+        List<Long> interestedGenreIds = movieGenreRepository.findByMovieIds(interestedMovieIds)
                 .stream()
                 .map(movieGenre -> movieGenre.getGenre().getId())
                 .distinct()
                 .toList();
 
-        if (likedGenreIds.isEmpty()) {
+        if (interestedGenreIds.isEmpty()) {
             return;
         }
 
         List<Movie> movies = movieGenreRepository.findPublishedMoviesByGenreIds(
-                likedGenreIds,
+                interestedGenreIds,
                 PageRequest.of(0, Math.min(candidateLimit, 120))
         );
 
         addMovies(candidateMap, movies);
     }
 
-    private void addActorCandidates(
-            List<Rating> userRatings,
+    private void addActorCandidatesFromInterest(
+            Map<Long, Double> movieInterestScores,
             Map<Long, Movie> candidateMap,
             int candidateLimit
     ) {
-        List<Long> likedMovieIds = userRatings.stream()
-                .filter(rating -> safeDouble(rating.getRatingValue()) >= LIKED_RATING_THRESHOLD)
-                .map(rating -> rating.getMovie().getId())
+        List<Long> interestedMovieIds = movieInterestScores.entrySet()
+                .stream()
+                .filter(entry -> entry.getValue() >= 0.35)
+                .map(Map.Entry::getKey)
                 .toList();
 
-        if (likedMovieIds.isEmpty()) {
+        if (interestedMovieIds.isEmpty()) {
             return;
         }
 
-        List<Long> likedActorIds = movieActorRepository.findByMovieIds(likedMovieIds)
+        List<Long> interestedActorIds = movieActorRepository.findByMovieIds(interestedMovieIds)
                 .stream()
+                .filter(this::isImportantActor)
                 .map(movieActor -> movieActor.getActor().getId())
                 .distinct()
                 .toList();
 
-        if (likedActorIds.isEmpty()) {
+        if (interestedActorIds.isEmpty()) {
             return;
         }
 
         List<Movie> movies = movieActorRepository.findPublishedMoviesByActorIds(
-                likedActorIds,
+                interestedActorIds,
                 PageRequest.of(0, Math.min(candidateLimit, 80))
         );
 
