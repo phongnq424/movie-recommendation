@@ -10,7 +10,7 @@ interface YoutubeMoviePlayerProps {
 }
 
 export function YoutubeMoviePlayer({ movieUrl, moviePublicId }: YoutubeMoviePlayerProps) {
-    const [hasCountedView, setHasCountedView] = useState(false);
+    const [hasTrackedPlay, setHasTrackedPlay] = useState(false);
     const [hasTrackedFinish, setHasTrackedFinish] = useState(false);
 
     const playerRef = useRef<any>(null);
@@ -41,6 +41,7 @@ export function YoutubeMoviePlayer({ movieUrl, moviePublicId }: YoutubeMoviePlay
 
         const watchedSeconds = Math.floor(player.getCurrentTime());
         const durationSeconds = Math.floor(player.getDuration());
+
         const progressPercent =
             durationSeconds > 0
                 ? Math.floor((watchedSeconds / durationSeconds) * 100)
@@ -54,25 +55,21 @@ export function YoutubeMoviePlayer({ movieUrl, moviePublicId }: YoutubeMoviePlay
     };
 
     const onPlayerPlay: YouTubeProps["onPlay"] = async () => {
+        if (hasTrackedPlay) {
+            return;
+        }
+
         try {
-            if (!hasCountedView) {
-                setHasCountedView(true);
+            setHasTrackedPlay(true);
 
-                await movieService.increaseViewCount(moviePublicId);
-
-                await movieService.trackInteraction(moviePublicId, {
-                    interactionType: "PLAY",
-                    value: 1,
-                });
-
-                console.log("Successfully registered view and PLAY interaction:", moviePublicId);
-                return;
-            }
+            await movieService.increaseViewCount(moviePublicId);
 
             await movieService.trackInteraction(moviePublicId, {
                 interactionType: "PLAY",
-                value: 0.3,
+                value: 1,
             });
+
+            console.log("Successfully registered PLAY interaction:", moviePublicId);
         } catch (error) {
             console.error("Failed to track PLAY interaction:", error);
         }
