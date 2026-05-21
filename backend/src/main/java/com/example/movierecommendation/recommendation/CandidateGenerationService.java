@@ -23,11 +23,13 @@ public class CandidateGenerationService {
 
     private static final String STATUS_PUBLISHED = "PUBLISHED";
     private static final double LIKED_RATING_THRESHOLD = 4.0;
+    private static final double MIN_SIMILARITY = 0.30;
 
     private final MovieRepository movieRepository;
     private final RatingRepository ratingRepository;
     private final MovieGenreRepository movieGenreRepository;
     private final MovieActorRepository movieActorRepository;
+    private final UserSimilarityCalculator userSimilarityCalculator;
 
     public List<Movie> generateCandidates(User user, int candidateLimit) {
         List<Rating> userRatings = ratingRepository.findByUserId(user.getId());
@@ -152,9 +154,9 @@ public class CandidateGenerationService {
         Map<Long, Double> similarityByUser = new HashMap<>();
 
         for (Map.Entry<Long, List<Rating>> entry : ratingsByOtherUser.entrySet()) {
-            double similarity = calculateSimilarity(currentUserRatingMap, entry.getValue());
+            double similarity = userSimilarityCalculator.calculate(currentUserRatingMap, entry.getValue());
 
-            if (similarity >= 0.30) {
+            if (similarity >= MIN_SIMILARITY) {
                 similarityByUser.put(entry.getKey(), similarity);
             }
         }
@@ -176,34 +178,6 @@ public class CandidateGenerationService {
                 .toList();
 
         addMovies(candidateMap, collaborativeMovies);
-    }
-
-    private double calculateSimilarity(
-            Map<Long, Double> currentUserRatingMap,
-            List<Rating> otherUserRatings
-    ) {
-        double totalDifference = 0.0;
-        int overlap = 0;
-
-        for (Rating otherRating : otherUserRatings) {
-            Long movieId = otherRating.getMovie().getId();
-
-            if (currentUserRatingMap.containsKey(movieId)) {
-                double currentRating = currentUserRatingMap.get(movieId);
-                double otherRatingValue = safeDouble(otherRating.getRatingValue());
-
-                totalDifference += Math.abs(currentRating - otherRatingValue);
-                overlap++;
-            }
-        }
-
-        if (overlap == 0) {
-            return 0.0;
-        }
-
-        double averageDifference = totalDifference / overlap;
-
-        return Math.max(0.0, 1.0 - averageDifference / 4.0);
     }
 
     private boolean isImportantActor(MovieActor movieActor) {

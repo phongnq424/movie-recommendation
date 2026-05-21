@@ -25,7 +25,9 @@ import java.util.stream.Collectors;
 public class RecommendationScoreCalculator {
 
     private static final double LIKED_RATING_THRESHOLD = 4.0;
+    private static final double MIN_SIMILARITY = 0.30;
 
+    private final UserSimilarityCalculator userSimilarityCalculator;
     private final RatingRepository ratingRepository;
     private final MovieGenreRepository movieGenreRepository;
     private final MovieActorRepository movieActorRepository;
@@ -399,9 +401,9 @@ public class RecommendationScoreCalculator {
         Map<Long, Double> similarityByUser = new HashMap<>();
 
         for (Map.Entry<Long, List<Rating>> entry : ratingsByOtherUser.entrySet()) {
-            double similarity = calculateUserSimilarity(currentUserRatingMap, entry.getValue());
+            double similarity = userSimilarityCalculator.calculate(currentUserRatingMap, entry.getValue());
 
-            if (similarity >= 0.30) {
+            if (similarity >= MIN_SIMILARITY) {
                 similarityByUser.put(entry.getKey(), similarity);
             }
         }
@@ -444,34 +446,6 @@ public class RecommendationScoreCalculator {
         }
 
         return new CollaborativeResult(collaborativeScores, similarityByUser.size());
-    }
-
-    private double calculateUserSimilarity(
-            Map<Long, Double> currentUserRatingMap,
-            List<Rating> otherUserRatings
-    ) {
-        double totalDifference = 0.0;
-        int overlap = 0;
-
-        for (Rating otherRating : otherUserRatings) {
-            Long movieId = otherRating.getMovie().getId();
-
-            if (currentUserRatingMap.containsKey(movieId)) {
-                double currentRating = currentUserRatingMap.get(movieId);
-                double otherRatingValue = safeDouble(otherRating.getRatingValue());
-
-                totalDifference += Math.abs(currentRating - otherRatingValue);
-                overlap++;
-            }
-        }
-
-        if (overlap == 0) {
-            return 0.0;
-        }
-
-        double averageDifference = totalDifference / overlap;
-
-        return clamp(1.0 - averageDifference / 4.0);
     }
 
     private boolean isImportantActor(MovieActor movieActor) {
