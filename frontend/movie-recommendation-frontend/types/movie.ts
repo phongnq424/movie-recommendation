@@ -63,3 +63,4 @@ export type MovieDetailResponse = Movie & {
     actors: MovieActorResponse[];
     genres: MovieGenreResponse[];
 };
+

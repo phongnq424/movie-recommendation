@@ -1,5 +1,9 @@
 import axiosClient from "@/services/axios";
 import type { Movie, MovieDetailResponse, MovieRequest } from "@/types/movie";
+import type {
+    TrackInteractionRequest,
+    UserMovieInteractionResponse
+} from "@/types/interaction";
 
 export const movieService = {
     async getAllMovies(): Promise<Movie[]> {
@@ -82,5 +86,16 @@ export const movieService = {
     async increaseViewCount(publicId: string): Promise<Movie> {
         const response = await axiosClient.post<Movie>(`/movies/${publicId}/view`);
         return response.data;
-    }
+    },
+    async trackInteraction(
+        moviePublicId: string,
+        payload: TrackInteractionRequest
+    ): Promise<UserMovieInteractionResponse> {
+        const response = await axiosClient.post<UserMovieInteractionResponse>(
+            `/interactions/movies/${moviePublicId}`,
+            payload
+        );
+
+        return response.data;
+    },
 };
