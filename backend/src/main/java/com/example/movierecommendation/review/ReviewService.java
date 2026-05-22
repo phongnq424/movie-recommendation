@@ -7,6 +7,7 @@ import com.example.movierecommendation.review.dto.ReviewResponse;
 import com.example.movierecommendation.review.dto.ReviewStatusUpdateRequest;
 import com.example.movierecommendation.user.User;
 import com.example.movierecommendation.user.UserRepository;
+import com.example.movierecommendation.reviewanalysis.ReviewAnalysisAsyncService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
     private final MovieRepository movieRepository;
+    private final ReviewAnalysisAsyncService reviewAnalysisAsyncService;
 
     @Transactional
     public ReviewResponse createOrUpdateReview(
@@ -58,7 +60,11 @@ public class ReviewService {
             review.setSpoiler(request.getSpoiler() != null ? request.getSpoiler() : false);
         }
 
-        return ReviewResponse.from(reviewRepository.save(review));
+        Review savedReview = reviewRepository.save(review);
+
+        reviewAnalysisAsyncService.analyzeReviewAsync(savedReview);
+
+        return ReviewResponse.from(savedReview);
     }
 
     public List<ReviewResponse> getPublishedReviewsByMovie(UUID movieId) {
@@ -152,7 +158,11 @@ public class ReviewService {
         review.setContent(request.getContent().trim());
         review.setSpoiler(request.getSpoiler() != null ? request.getSpoiler() : false);
 
-        return ReviewResponse.from(reviewRepository.save(review));
+        Review savedReview = reviewRepository.save(review);
+
+        reviewAnalysisAsyncService.analyzeReviewAsync(savedReview);
+
+        return ReviewResponse.from(savedReview);
     }
 
     public ReviewResponse updateReviewStatus(
