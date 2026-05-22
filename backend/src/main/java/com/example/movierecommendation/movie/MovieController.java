@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import com.example.movierecommendation.common.PageResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -22,22 +23,41 @@ public class MovieController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
-    public List<MovieResponse> getAllMovies() {
-        return movieService.getAllMovies();
+    public PageResponse<MovieResponse> getAllMovies(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return movieService.getAllMovies(page, size);
     }
 
     /**
      * Public API for homepage/movie listing.
      */
     @GetMapping("/published")
-    public List<MovieResponse> getPublishedMovies() {
-        return movieService.getPublishedMovies();
+    public PageResponse<MovieResponse> getPublishedMovies(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return movieService.getPublishedMovies(page, size);
+    }
+
+    @GetMapping("/published/search")
+    public PageResponse<MovieResponse> searchPublishedMovies(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return movieService.searchPublishedMovies(keyword, page, size);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/search")
-    public List<MovieResponse> searchMovies(@RequestParam String keyword) {
-        return movieService.searchMovies(keyword);
+    public PageResponse<MovieResponse> searchMovies(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return movieService.searchMovies(keyword, page, size);
     }
 
     /**

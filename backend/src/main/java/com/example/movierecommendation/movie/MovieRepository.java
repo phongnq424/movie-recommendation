@@ -1,5 +1,6 @@
 package com.example.movierecommendation.movie;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -12,7 +13,13 @@ import java.util.UUID;
 
 public interface MovieRepository extends JpaRepository<Movie, Long> {
 
-    List<Movie> findByTitleContainingIgnoreCase(String keyword);
+    Page<Movie> findByTitleContainingIgnoreCase(String keyword, Pageable pageable);
+
+    Page<Movie> findByStatusAndTitleContainingIgnoreCase(
+            String status,
+            String keyword,
+            Pageable pageable
+    );
 
     Optional<Movie> findByPublicId(UUID publicId);
 
@@ -22,6 +29,9 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
 
     boolean existsBySlug(String slug);
 
+    Page<Movie> findByStatus(String status, Pageable pageable);
+    Page<Movie> findByStatusNot(String status, Pageable pageable);
+
     List<Movie> findByStatus(String status);
 
     List<Movie> findTop10ByOrderByAverageRatingDescRatingCountDesc();
@@ -30,6 +40,7 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
             List<Long> movieIds,
             Pageable pageable
     );
+
     @Query("""
         SELECT m
         FROM Movie m
@@ -68,10 +79,10 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
 
     @Modifying
     @Query("""
-    UPDATE Movie m
-    SET m.viewCount = COALESCE(m.viewCount, 0) + 1
-    WHERE m.publicId = :publicId
-      AND m.status = 'PUBLISHED'
-""")
+        UPDATE Movie m
+        SET m.viewCount = COALESCE(m.viewCount, 0) + 1
+        WHERE m.publicId = :publicId
+          AND m.status = 'PUBLISHED'
+    """)
     int incrementViewCountByPublicId(@Param("publicId") UUID publicId);
 }

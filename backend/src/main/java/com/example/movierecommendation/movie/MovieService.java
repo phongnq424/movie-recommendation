@@ -7,6 +7,11 @@ import com.example.movierecommendation.movieactor.MovieActorRepository;
 import com.example.movierecommendation.movieactor.dto.MovieActorResponse;
 import com.example.movierecommendation.moviegenre.MovieGenreRepository;
 import com.example.movierecommendation.moviegenre.dto.MovieGenreResponse;
+import com.example.movierecommendation.common.PageResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,18 +34,23 @@ public class MovieService {
     private final MovieActorRepository movieActorRepository;
     private final MovieGenreRepository movieGenreRepository;
 
-    public List<MovieResponse> getAllMovies() {
-        return movieRepository.findAll()
-                .stream()
-                .map(MovieResponse::from)
-                .toList();
+    public PageResponse<MovieResponse> getAllMovies(int page, int size) {
+        Pageable pageable = createPageable(page, size);
+
+        Page<MovieResponse> movies = movieRepository.findByStatusNot("DELETED", pageable)
+                .map(MovieResponse::from);
+
+        return PageResponse.from(movies);
     }
 
-    public List<MovieResponse> getPublishedMovies() {
-        return movieRepository.findByStatus(STATUS_PUBLISHED)
-                .stream()
-                .map(MovieResponse::from)
-                .toList();
+    public PageResponse<MovieResponse> getPublishedMovies(int page, int size) {
+        Pageable pageable = createPageable(page, size);
+
+        Page<MovieResponse> movies = movieRepository
+                .findByStatus(STATUS_PUBLISHED, pageable)
+                .map(MovieResponse::from);
+
+        return PageResponse.from(movies);
     }
 
     public MovieResponse getMovieByPublicId(UUID publicId) {
@@ -95,12 +105,32 @@ public class MovieService {
         return MovieDetailResponse.from(movie, actors, genres);
     }
 
-    public List<MovieResponse> searchMovies(String keyword) {
-        return movieRepository.findByTitleContainingIgnoreCase(keyword)
-                .stream()
-                .map(MovieResponse::from)
-                .toList();
+    public PageResponse<MovieResponse> searchMovies(String keyword, int page, int size) {
+        Pageable pageable = createPageable(page, size);
+
+        Page<MovieResponse> movies = movieRepository
+                .findByTitleContainingIgnoreCase(keyword, pageable)
+                .map(MovieResponse::from);
+
+        return PageResponse.from(movies);
     }
+    public PageResponse<MovieResponse> searchPublishedMovies(String keyword, int page, int size) {
+        Pageable pageable = createPageable(page, size);
+
+        String safeKeyword = keyword == null ? "" : keyword.trim();
+
+        Page<MovieResponse> movies = movieRepository
+                .findByStatusAndTitleContainingIgnoreCase(
+                        STATUS_PUBLISHED,
+                        safeKeyword,
+                        pageable
+                )
+                .map(MovieResponse::from);
+
+        return PageResponse.from(movies);
+    }
+
+
 
     public MovieResponse createMovie(MovieRequest request) {
         return createMovies(List.of(request)).get(0);
@@ -311,5 +341,15 @@ public class MovieService {
                 .orElseThrow(() -> new RuntimeException("Movie not found"));
 
         return MovieResponse.from(movie);
+    }
+    private Pageable createPageable(int page, int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 50);
+
+        return PageRequest.of(
+                safePage,
+                safeSize,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
     }
 }
