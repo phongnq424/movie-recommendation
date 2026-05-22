@@ -64,3 +64,17 @@ export type MovieDetailResponse = Movie & {
     genres: MovieGenreResponse[];
 };
 
+export interface PaginationResponse<T> {
+    content: T[];
+    page: number;
+    size: number;
+    totalElements: number;
+    totalPages: number;
+    first: boolean;
+    last: boolean;
+    empty: boolean;
+    isLast?: boolean;
+}
+
+export type MoviePaginatedResponse = PaginationResponse<Movie>;
+

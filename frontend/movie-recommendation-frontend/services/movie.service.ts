@@ -1,5 +1,5 @@
 import axiosClient from "@/services/axios";
-import type { Movie, MovieDetailResponse, MovieRequest } from "@/types/movie";
+import type { Movie, MovieDetailResponse, MovieRequest, MoviePaginatedResponse } from "@/types/movie";
 import type {
     TrackInteractionRequest,
     UserMovieInteractionResponse
@@ -11,8 +11,25 @@ export const movieService = {
         return response.data;
     },
 
-    async getPublishedMovies(): Promise<Movie[]> {
-        const response = await axiosClient.get<Movie[]>("/movies/published");
+    async getPublishedMovies(page: number = 0, size: number = 20): Promise<Movie[]> {
+        const response = await axiosClient.get<MoviePaginatedResponse>("/movies/published", {
+            params: { page, size },
+        });
+        return response.data.content || [];
+    },
+
+    async getPublishedMoviesPaginated(page: number = 0, size: number = 20): Promise<MoviePaginatedResponse> {
+        const response = await axiosClient.get<MoviePaginatedResponse>("/movies/published", {
+            params: { page, size },
+        });
+        return response.data;
+    },
+
+
+    async getAllMoviesPaginated(page: number = 0, size: number = 20): Promise<MoviePaginatedResponse> {
+        const response = await axiosClient.get<MoviePaginatedResponse>("/movies", {
+            params: { page, size },
+        });
         return response.data;
     },
 
@@ -26,9 +43,16 @@ export const movieService = {
         return response.data;
     },
 
-    async searchMovies(keyword: string): Promise<Movie[]> {
-        const response = await axiosClient.get<Movie[]>("/movies/search", {
-            params: { keyword }
+    async searchMoviesPaginated(keyword: string, page: number = 0, size: number = 20): Promise<MoviePaginatedResponse> {
+        const response = await axiosClient.get<MoviePaginatedResponse>("/movies/search", {
+            params: { keyword, page, size },
+        });
+        return response.data;
+    },
+
+    async searchPublishedMoviesPaginated(keyword: string, page: number = 0, size: number = 20): Promise<MoviePaginatedResponse> {
+        const response = await axiosClient.get<MoviePaginatedResponse>("/movies/published/search", {
+            params: { keyword, page, size },
         });
         return response.data;
     },
