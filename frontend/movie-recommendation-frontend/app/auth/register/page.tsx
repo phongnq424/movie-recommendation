@@ -57,7 +57,7 @@ export default function RegisterPage() {
                 return;
             }
 
-            const payload = await authService.login(formData);
+            const payload = await authService.register(formData);
 
             localStorage.setItem('access_token', payload.accessToken);
             localStorage.setItem('refresh_token', payload.refreshToken);
