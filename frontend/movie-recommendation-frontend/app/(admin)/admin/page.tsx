@@ -17,7 +17,7 @@ export default function AdminDashboardPage() {
       ]);
 
       return {
-        moviesCount: movies?.length || 0,
+        moviesCount: movies?.totalElements || 0,
         genresCount: genres?.length || 0,
         actorsCount: actors?.length || 0,
         usersCount: users?.length || 0,
