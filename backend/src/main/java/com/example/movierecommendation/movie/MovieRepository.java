@@ -81,9 +81,12 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
     @Modifying
     @Query("""
         UPDATE Movie m
-        SET m.viewCount = COALESCE(m.viewCount, 0) + 1
+        SET m.viewCount = m.viewCount + 1
         WHERE m.publicId = :publicId
           AND m.status = 'PUBLISHED'
     """)
     int incrementViewCountByPublicId(@Param("publicId") UUID publicId);
+    List<Movie> findByIdIn(List<Long> ids);
+
+    List<Movie> findByStatus(String status);
 }

@@ -15,7 +15,7 @@ import java.util.UUID;
 public class RecommendationService {
 
     private final UserRepository userRepository;
-    private final CandidateGenerationService candidateGenerationService;
+    private final VectorCandidateRetrievalService vectorCandidateRetrievalService;
     private final RecommendationRankingService rankingService;
 
     public List<RecommendationResponse> recommendForUser(UUID userPublicId, int limit) {
@@ -24,7 +24,7 @@ public class RecommendationService {
 
         int safeLimit = normalizeLimit(limit);
 
-        List<Movie> candidates = candidateGenerationService.generateCandidates(user, 250);
+        List<Movie> candidates = vectorCandidateRetrievalService.retrieveForUser(user, 250);
 
         return rankingService.rankForUser(user, candidates, safeLimit);
     }
@@ -32,7 +32,7 @@ public class RecommendationService {
     public List<RecommendationResponse> recommendForAnonymous(int limit) {
         int safeLimit = normalizeLimit(limit);
 
-        List<Movie> candidates = candidateGenerationService.generateAnonymousCandidates(200);
+        List<Movie> candidates = vectorCandidateRetrievalService.retrieveForAnonymous(200);
 
         return rankingService.rankForAnonymous(candidates, safeLimit);
     }

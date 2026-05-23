@@ -22,5 +22,6 @@ public class RecommendationScoreBreakdown {
     private Double sentimentWeight;
     private Double negativePenalty;
 
+
     private String strategy;
 }
