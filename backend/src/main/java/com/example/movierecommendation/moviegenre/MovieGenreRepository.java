@@ -43,4 +43,11 @@ public interface MovieGenreRepository extends JpaRepository<MovieGenre, Long> {
             @Param("genreIds") List<Long> genreIds,
             Pageable pageable
     );
+    @Query("""
+        select movieGenre.genre.id, count(distinct movieGenre.movie.id)
+        from MovieGenre movieGenre
+        where movieGenre.movie.status = :status
+        group by movieGenre.genre.id
+        """)
+    List<Object[]> countPublishedMoviesByGenre(@Param("status") String status);
 }

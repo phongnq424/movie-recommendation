@@ -10,7 +10,7 @@ import java.util.Map;
 public class UserSimilarityCalculator {
 
     private static final int MIN_OVERLAP_RATINGS = 3;
-    private static final double MAX_RATING_DIFFERENCE = 4.0;
+    private static final double SHRINKAGE = 5.0;
 
     public double calculate(
             Map<Long, Double> currentUserRatingMap,
@@ -24,24 +24,41 @@ public class UserSimilarityCalculator {
             return 0.0;
         }
 
-        double totalDifference = 0.0;
+        double currentUserTotal = 0.0;
+        double otherUserTotal = 0.0;
         int overlap = 0;
 
         for (Rating otherRating : otherUserRatings) {
+            if (otherRating == null) {
+                continue;
+            }
+
             if (otherRating.getMovie() == null) {
+                continue;
+            }
+
+            if (otherRating.getRatingValue() == null) {
                 continue;
             }
 
             Long movieId = otherRating.getMovie().getId();
 
+            if (movieId == null) {
+                continue;
+            }
+
             if (!currentUserRatingMap.containsKey(movieId)) {
                 continue;
             }
 
-            double currentRating = currentUserRatingMap.get(movieId);
-            double otherRatingValue = safeDouble(otherRating.getRatingValue());
+            Double currentRatingValue = currentUserRatingMap.get(movieId);
 
-            totalDifference += Math.abs(currentRating - otherRatingValue);
+            if (currentRatingValue == null) {
+                continue;
+            }
+
+            currentUserTotal += currentRatingValue;
+            otherUserTotal += otherRating.getRatingValue();
             overlap++;
         }
 
@@ -49,13 +66,64 @@ public class UserSimilarityCalculator {
             return 0.0;
         }
 
-        double averageDifference = totalDifference / overlap;
+        double currentUserAverage = currentUserTotal / overlap;
+        double otherUserAverage = otherUserTotal / overlap;
 
-        return clamp(1.0 - averageDifference / MAX_RATING_DIFFERENCE);
-    }
+        double numerator = 0.0;
+        double currentUserSquaredSum = 0.0;
+        double otherUserSquaredSum = 0.0;
 
-    private double safeDouble(Double value) {
-        return value == null ? 0.0 : value;
+        for (Rating otherRating : otherUserRatings) {
+            if (otherRating == null) {
+                continue;
+            }
+
+            if (otherRating.getMovie() == null) {
+                continue;
+            }
+
+            if (otherRating.getRatingValue() == null) {
+                continue;
+            }
+
+            Long movieId = otherRating.getMovie().getId();
+
+            if (movieId == null) {
+                continue;
+            }
+
+            if (!currentUserRatingMap.containsKey(movieId)) {
+                continue;
+            }
+
+            Double currentRatingValue = currentUserRatingMap.get(movieId);
+
+            if (currentRatingValue == null) {
+                continue;
+            }
+
+            double currentDeviation = currentRatingValue - currentUserAverage;
+            double otherDeviation = otherRating.getRatingValue() - otherUserAverage;
+
+            numerator += currentDeviation * otherDeviation;
+            currentUserSquaredSum += currentDeviation * currentDeviation;
+            otherUserSquaredSum += otherDeviation * otherDeviation;
+        }
+
+        if (currentUserSquaredSum == 0.0 || otherUserSquaredSum == 0.0) {
+            return 0.0;
+        }
+
+        double denominator = Math.sqrt(currentUserSquaredSum) * Math.sqrt(otherUserSquaredSum);
+        double pearson = numerator / denominator;
+
+        if (pearson <= 0.0) {
+            return 0.0;
+        }
+
+        double confidence = overlap / (overlap + SHRINKAGE);
+
+        return clamp(pearson * confidence);
     }
 
     private double clamp(double value) {

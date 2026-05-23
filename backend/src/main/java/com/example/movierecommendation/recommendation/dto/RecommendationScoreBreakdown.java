@@ -20,6 +20,7 @@ public class RecommendationScoreBreakdown {
     private Double popularityWeight;
     private Double freshnessWeight;
     private Double sentimentWeight;
+    private Double negativePenalty;
 
     private String strategy;
 }

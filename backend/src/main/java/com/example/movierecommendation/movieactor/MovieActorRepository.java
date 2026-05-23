@@ -41,4 +41,11 @@ public interface MovieActorRepository extends JpaRepository<MovieActor, Long> {
             @Param("actorIds") List<Long> actorIds,
             Pageable pageable
     );
+    @Query("""
+        select movieActor.actor.id, count(distinct movieActor.movie.id)
+        from MovieActor movieActor
+        where movieActor.movie.status = :status
+        group by movieActor.actor.id
+        """)
+    List<Object[]> countPublishedMoviesByActor(@Param("status") String status);
 }

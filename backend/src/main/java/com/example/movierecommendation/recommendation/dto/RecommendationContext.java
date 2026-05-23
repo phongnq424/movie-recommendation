@@ -22,6 +22,9 @@ public class RecommendationContext {
     private Map<Long, Set<Long>> candidateGenreIds;
     private Map<Long, Set<Long>> candidateActorIds;
 
+    private Map<Long, Double> genreIdfScores;
+    private Map<Long, Double> actorIdfScores;
+
     private Map<Long, Double> collaborativeScores;
     private Map<Long, Double> sentimentScores;
 

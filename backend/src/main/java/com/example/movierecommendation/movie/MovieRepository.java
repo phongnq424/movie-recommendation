@@ -30,9 +30,10 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
     boolean existsBySlug(String slug);
 
     Page<Movie> findByStatus(String status, Pageable pageable);
+
     Page<Movie> findByStatusNot(String status, Pageable pageable);
 
-    List<Movie> findByStatus(String status);
+    long countByStatus(String status);
 
     List<Movie> findTop10ByOrderByAverageRatingDescRatingCountDesc();
 
