@@ -1,6 +1,6 @@
 package com.example.movierecommendation.recommendation;
 
-import com.example.movierecommendation.movie.Movie;
+import com.example.movierecommendation.recommendation.dto.RecommendationCandidate;
 import com.example.movierecommendation.recommendation.dto.RecommendationResponse;
 import com.example.movierecommendation.recommendation.impression.RecommendationImpressionService;
 import com.example.movierecommendation.recommendation.ml.LearnedCandidateRetrievalService;
@@ -33,7 +33,10 @@ public class RecommendationService {
         int safeLimit = normalizeLimit(limit);
         UUID requestId = UUID.randomUUID();
 
-        List<Movie> candidates = learnedCandidateRetrievalService.retrieveForUser(user, USER_CANDIDATE_LIMIT);
+        List<RecommendationCandidate> candidates = learnedCandidateRetrievalService.retrieveForUser(
+                user,
+                USER_CANDIDATE_LIMIT
+        );
 
         if (candidates.isEmpty()) {
             return List.of();
@@ -61,7 +64,9 @@ public class RecommendationService {
         int safeLimit = normalizeLimit(limit);
         UUID requestId = UUID.randomUUID();
 
-        List<Movie> candidates = learnedCandidateRetrievalService.retrieveForAnonymous(ANONYMOUS_CANDIDATE_LIMIT);
+        List<RecommendationCandidate> candidates = learnedCandidateRetrievalService.retrieveForAnonymous(
+                ANONYMOUS_CANDIDATE_LIMIT
+        );
 
         if (candidates.isEmpty()) {
             return List.of();

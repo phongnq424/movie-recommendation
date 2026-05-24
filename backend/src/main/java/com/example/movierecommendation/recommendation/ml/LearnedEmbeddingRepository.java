@@ -15,16 +15,18 @@ public class LearnedEmbeddingRepository {
     @PersistenceContext
     private EntityManager entityManager;
 
-    public String findUserEmbeddingText(Long userId) {
+    public String findUserEmbeddingText(Long userId, String modelVersion) {
         Query query = entityManager.createNativeQuery("""
                 select embedding::text
                 from learned_user_embeddings
                 where user_id = :userId
+                  and model_version = :modelVersion
                 order by updated_at desc
                 limit 1
                 """);
 
         query.setParameter("userId", userId);
+        query.setParameter("modelVersion", modelVersion);
 
         List<?> rows = query.getResultList();
 
@@ -54,7 +56,7 @@ public class LearnedEmbeddingRepository {
         return (String) rows.get(0);
     }
 
-    public List<Long> findNearestMovieIds(
+    public List<LearnedMovieRetrievalResult> findNearestMoviesWithScores(
             String userEmbedding,
             List<Long> excludedMovieIds,
             int limit,
@@ -66,39 +68,44 @@ public class LearnedEmbeddingRepository {
             excludedCondition = " and m.id not in (:excludedMovieIds) ";
         }
 
-        String versionCondition = "";
-
-        if (modelVersion != null && !modelVersion.isBlank()) {
-            versionCondition = " and me.model_version = :modelVersion ";
-        }
-
         String sql = """
-                select m.id
+                select
+                    m.id as movie_id,
+                    least(
+                        1.0,
+                        greatest(
+                            0.0,
+                            1.0 - (me.embedding <=> cast(:userEmbedding as vector))
+                        )
+                    ) as retrieval_score
                 from learned_movie_embeddings me
                 join movies m on m.id = me.movie_id
                 where m.status = 'PUBLISHED'
-                """ + versionCondition + excludedCondition + """
+                  and me.model_version = :modelVersion
+                """ + excludedCondition + """
                 order by me.embedding <=> cast(:userEmbedding as vector)
                 limit :limit
                 """;
 
         Query query = entityManager.createNativeQuery(sql);
         query.setParameter("userEmbedding", userEmbedding);
+        query.setParameter("modelVersion", modelVersion);
         query.setParameter("limit", limit);
-
-        if (modelVersion != null && !modelVersion.isBlank()) {
-            query.setParameter("modelVersion", modelVersion);
-        }
 
         if (excludedMovieIds != null && !excludedMovieIds.isEmpty()) {
             query.setParameter("excludedMovieIds", excludedMovieIds);
         }
 
         List<?> rows = query.getResultList();
-        List<Long> result = new ArrayList<>();
+        List<LearnedMovieRetrievalResult> result = new ArrayList<>();
 
         for (Object row : rows) {
-            result.add(((Number) row).longValue());
+            Object[] columns = (Object[]) row;
+
+            Long movieId = ((Number) columns[0]).longValue();
+            Double retrievalScore = ((Number) columns[1]).doubleValue();
+
+            result.add(new LearnedMovieRetrievalResult(movieId, retrievalScore));
         }
 
         return result;
@@ -145,8 +152,6 @@ public class LearnedEmbeddingRepository {
         query.setParameter("activeVersion", activeVersion);
         query.executeUpdate();
     }
-
-
 
     @Transactional
     public void upsertUserEmbedding(Long userId, String embedding, String modelVersion) {

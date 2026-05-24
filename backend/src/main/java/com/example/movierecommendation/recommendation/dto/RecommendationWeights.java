@@ -38,34 +38,34 @@ public class RecommendationWeights {
 
     public static RecommendationWeights lightUser() {
         return RecommendationWeights.builder()
-                .content(0.45)
-                .collaborative(0.00)
+                .content(0.40)
+                .collaborative(0.20)
                 .popularity(0.25)
-                .freshness(0.20)
-                .sentiment(0.10)
-                .strategy("LIGHT_PERSONALIZATION")
+                .freshness(0.10)
+                .sentiment(0.05)
+                .strategy("LIGHT_PERSONALIZATION_WITH_ALS")
                 .build();
     }
 
     public static RecommendationWeights contentHeavy() {
         return RecommendationWeights.builder()
-                .content(0.55)
-                .collaborative(0.00)
+                .content(0.45)
+                .collaborative(0.20)
                 .popularity(0.20)
-                .freshness(0.15)
-                .sentiment(0.10)
-                .strategy("CONTENT_HEAVY")
+                .freshness(0.10)
+                .sentiment(0.05)
+                .strategy("CONTENT_HEAVY_WITH_ALS")
                 .build();
     }
 
     public static RecommendationWeights personalized() {
         return RecommendationWeights.builder()
-                .content(0.40)
-                .collaborative(0.00)
-                .popularity(0.25)
-                .freshness(0.20)
-                .sentiment(0.15)
-                .strategy("PERSONALIZED_LEARNED_RETRIEVAL")
+                .content(0.30)
+                .collaborative(0.35)
+                .popularity(0.15)
+                .freshness(0.10)
+                .sentiment(0.10)
+                .strategy("PERSONALIZED_LEARNED_HYBRID")
                 .build();
     }
 }

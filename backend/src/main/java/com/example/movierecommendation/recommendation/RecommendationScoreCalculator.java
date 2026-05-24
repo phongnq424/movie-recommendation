@@ -36,7 +36,11 @@ public class RecommendationScoreCalculator {
     private final UserMovieInterestService userMovieInterestService;
     private final MovieRepository movieRepository;
 
-    public RecommendationContext buildContext(User user, List<Movie> candidates) {
+    public RecommendationContext buildContext(
+            User user,
+            List<Movie> candidates,
+            Map<Long, Double> collaborativeScores
+    ) {
         List<Rating> userRatings = ratingRepository.findByUserId(user.getId());
 
         List<Long> candidateMovieIds = candidates.stream()
@@ -59,8 +63,6 @@ public class RecommendationScoreCalculator {
                 interestProfile.getMovieInterestScores(),
                 actorIdfScores
         );
-
-        CollaborativeResult collaborativeResult = new CollaborativeResult(Map.of(), 0);
 
         Map<Long, Double> sentimentScores = loadSentimentScores(candidateMovieIds);
 
@@ -86,9 +88,9 @@ public class RecommendationScoreCalculator {
                 .candidateActorIds(candidateActorIds)
                 .genreIdfScores(genreIdfScores)
                 .actorIdfScores(actorIdfScores)
-                .collaborativeScores(collaborativeResult.collaborativeScores())
+                .collaborativeScores(collaborativeScores == null ? Map.of() : collaborativeScores)
                 .sentimentScores(sentimentScores)
-                .similarUserCount(collaborativeResult.similarUserCount())
+                .similarUserCount(0)
                 .interactionCount(interestProfile.getInteractionCount())
                 .maxRatingCount(maxRatingCount)
                 .maxViewCount(maxViewCount)
