@@ -60,11 +60,7 @@ public class RecommendationScoreCalculator {
                 actorIdfScores
         );
 
-        CollaborativeResult collaborativeResult = calculateCollaborativeScores(
-                user,
-                userRatings,
-                candidates
-        );
+        CollaborativeResult collaborativeResult = new CollaborativeResult(Map.of(), 0);
 
         Map<Long, Double> sentimentScores = loadSentimentScores(candidateMovieIds);
 

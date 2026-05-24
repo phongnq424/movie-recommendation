@@ -7,8 +7,10 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Pageable;
 
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public interface MovieGenreRepository extends JpaRepository<MovieGenre, Long> {
 
@@ -50,4 +52,13 @@ public interface MovieGenreRepository extends JpaRepository<MovieGenre, Long> {
         group by movieGenre.genre.id
         """)
     List<Object[]> countPublishedMoviesByGenre(@Param("status") String status);
+    @Query("""
+        select movie.publicId, min(genre.id)
+        from MovieGenre movieGenre
+        join movieGenre.movie movie
+        join movieGenre.genre genre
+        where movie.publicId in :moviePublicIds
+        group by movie.publicId
+        """)
+    List<Object[]> findPrimaryGenreIdsByMoviePublicIds(@Param("moviePublicIds") Collection<UUID> moviePublicIds);
 }
