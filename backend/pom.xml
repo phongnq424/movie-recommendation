@@ -108,23 +108,7 @@
             <version>0.13.0</version>
             <scope>runtime</scope>
         </dependency>
-        <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-core_2.13</artifactId>
-            <version>4.0.1</version>
-        </dependency>
 
-        <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-sql_2.13</artifactId>
-            <version>4.0.1</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-mllib_2.13</artifactId>
-            <version>4.0.1</version>
-        </dependency>
     </dependencies>
 
     <build>

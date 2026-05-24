@@ -18,15 +18,11 @@ public class RecommendationWeightResolver {
             return RecommendationWeights.newUser();
         }
 
-        if (ratingCount == 0) {
+        if (ratingCount < 3 && interactionCount < 5) {
             return RecommendationWeights.lightUser();
         }
 
         if (ratingCount < 5) {
-            return RecommendationWeights.lightUser();
-        }
-
-        if (context.getSimilarUserCount() < 3) {
             return RecommendationWeights.contentHeavy();
         }
 

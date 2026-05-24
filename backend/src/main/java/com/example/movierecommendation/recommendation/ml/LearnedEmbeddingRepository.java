@@ -146,6 +146,8 @@ public class LearnedEmbeddingRepository {
         query.executeUpdate();
     }
 
+
+
     @Transactional
     public void upsertUserEmbedding(Long userId, String embedding, String modelVersion) {
         Query query = entityManager.createNativeQuery("""

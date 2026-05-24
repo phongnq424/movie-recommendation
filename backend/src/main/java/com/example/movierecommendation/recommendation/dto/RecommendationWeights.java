@@ -38,10 +38,10 @@ public class RecommendationWeights {
 
     public static RecommendationWeights lightUser() {
         return RecommendationWeights.builder()
-                .content(0.40)
-                .collaborative(0.10)
+                .content(0.45)
+                .collaborative(0.00)
                 .popularity(0.25)
-                .freshness(0.15)
+                .freshness(0.20)
                 .sentiment(0.10)
                 .strategy("LIGHT_PERSONALIZATION")
                 .build();
@@ -49,8 +49,8 @@ public class RecommendationWeights {
 
     public static RecommendationWeights contentHeavy() {
         return RecommendationWeights.builder()
-                .content(0.50)
-                .collaborative(0.05)
+                .content(0.55)
+                .collaborative(0.00)
                 .popularity(0.20)
                 .freshness(0.15)
                 .sentiment(0.10)
@@ -60,12 +60,12 @@ public class RecommendationWeights {
 
     public static RecommendationWeights personalized() {
         return RecommendationWeights.builder()
-                .content(0.35)
-                .collaborative(0.30)
-                .popularity(0.15)
-                .freshness(0.10)
-                .sentiment(0.10)
-                .strategy("PERSONALIZED")
+                .content(0.40)
+                .collaborative(0.00)
+                .popularity(0.25)
+                .freshness(0.20)
+                .sentiment(0.15)
+                .strategy("PERSONALIZED_LEARNED_RETRIEVAL")
                 .build();
     }
 }

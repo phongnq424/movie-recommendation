@@ -68,10 +68,6 @@ public class CandidateGenerationService {
             addActorCandidatesFromInterest(movieInterestScores, candidateMap);
         }
 
-        if (!userRatings.isEmpty()) {
-            addCollaborativeCandidates(user, userRatings, candidateMap);
-        }
-
         addMovies(
                 candidateMap,
                 movieRepository.findPopularPublishedMovies(PageRequest.of(0, POPULAR_CANDIDATE_LIMIT))
