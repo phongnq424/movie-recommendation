@@ -5,6 +5,7 @@ import com.example.movierecommendation.movie.Movie;
 import com.example.movierecommendation.movie.MovieRepository;
 import com.example.movierecommendation.rating.dto.RatingRequest;
 import com.example.movierecommendation.rating.dto.RatingResponse;
+import com.example.movierecommendation.recommendation.cache.RecommendationCacheService;
 import com.example.movierecommendation.user.User;
 import com.example.movierecommendation.user.UserRepository;
 import jakarta.transaction.Transactional;
@@ -21,6 +22,7 @@ public class RatingService {
     private final RatingRepository ratingRepository;
     private final MovieRepository movieRepository;
     private final UserRepository userRepository;
+    private final RecommendationCacheService recommendationCacheService;
 
     @Transactional
     public RatingResponse rateMovie(UUID currentUserPublicId, RatingRequest request) {
@@ -45,7 +47,7 @@ public class RatingService {
 
         Rating savedRating = ratingRepository.save(rating);
         updateMovieAverageRating(movie.getId());
-
+        recommendationCacheService.evictUserRecommendations(user.getPublicId());
         return RatingResponse.from(savedRating);
     }
 

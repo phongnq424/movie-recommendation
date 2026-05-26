@@ -1,12 +1,16 @@
 package com.example.movierecommendation.recommendation.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class RecommendationScoreBreakdown {
 
     private Double contentScore;
@@ -21,7 +25,6 @@ public class RecommendationScoreBreakdown {
     private Double freshnessWeight;
     private Double sentimentWeight;
     private Double negativePenalty;
-
 
     private String strategy;
 }

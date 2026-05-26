@@ -5,9 +5,11 @@ import com.example.movierecommendation.interaction.dto.TrackInteractionRequest;
 import com.example.movierecommendation.interaction.dto.UserMovieInteractionResponse;
 import com.example.movierecommendation.movie.Movie;
 import com.example.movierecommendation.movie.MovieRepository;
+import com.example.movierecommendation.recommendation.cache.RecommendationCacheService;
 import com.example.movierecommendation.user.User;
 import com.example.movierecommendation.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +17,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserMovieInteractionService {
@@ -22,12 +25,17 @@ public class UserMovieInteractionService {
     private final UserMovieInteractionRepository interactionRepository;
     private final MovieRepository movieRepository;
     private final UserRepository userRepository;
+    private final RecommendationCacheService recommendationCacheService;
 
     public UserMovieInteractionResponse track(
             UUID moviePublicId,
             TrackInteractionRequest request,
             Authentication authentication
     ) {
+        if (moviePublicId == null) {
+            throw new ResourceNotFoundException("Movie not found");
+        }
+
         Movie movie = movieRepository.findByPublicId(moviePublicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Movie not found"));
 
@@ -50,6 +58,8 @@ public class UserMovieInteractionService {
 
         UserMovieInteraction savedInteraction = interactionRepository.save(interaction);
 
+        safelyEvictRecommendationCache(user);
+
         return UserMovieInteractionResponse.from(savedInteraction);
     }
 
@@ -66,6 +76,10 @@ public class UserMovieInteractionService {
             UUID moviePublicId,
             Authentication authentication
     ) {
+        if (moviePublicId == null) {
+            throw new ResourceNotFoundException("Movie not found");
+        }
+
         User user = resolveRequiredUser(authentication);
 
         Movie movie = movieRepository.findByPublicId(moviePublicId)
@@ -79,6 +93,10 @@ public class UserMovieInteractionService {
             UserMovieInteraction interaction,
             TrackInteractionRequest request
     ) {
+        if (request == null) {
+            return;
+        }
+
         String newType = request.getInteractionType();
 
         if (newType != null && shouldUpdateInteractionType(interaction, newType)) {
@@ -93,11 +111,11 @@ public class UserMovieInteractionService {
             }
         }
 
-        if (request.getDurationSeconds() != null) {
+        if (request.getDurationSeconds() != null && request.getDurationSeconds() >= 0) {
             interaction.setDurationSeconds(request.getDurationSeconds());
         }
 
-        if (request.getWatchedSeconds() != null) {
+        if (request.getWatchedSeconds() != null && request.getWatchedSeconds() >= 0) {
             Integer oldWatchedSeconds = interaction.getWatchedSeconds();
 
             if (oldWatchedSeconds == null || request.getWatchedSeconds() > oldWatchedSeconds) {
@@ -106,10 +124,11 @@ public class UserMovieInteractionService {
         }
 
         if (request.getProgressPercent() != null) {
+            double safeProgress = Math.max(0.0, Math.min(100.0, request.getProgressPercent()));
             Double oldProgress = interaction.getProgressPercent();
 
-            if (oldProgress == null || request.getProgressPercent() > oldProgress) {
-                interaction.setProgressPercent(request.getProgressPercent());
+            if (oldProgress == null || safeProgress > oldProgress) {
+                interaction.setProgressPercent(safeProgress);
             }
         }
 
@@ -133,6 +152,10 @@ public class UserMovieInteractionService {
             UserMovieInteraction interaction,
             String newType
     ) {
+        if (interaction == null || newType == null || newType.isBlank()) {
+            return false;
+        }
+
         if ("FINISH_WATCHING".equals(interaction.getInteractionType())) {
             return false;
         }
@@ -183,9 +206,31 @@ public class UserMovieInteractionService {
             throw new ResourceNotFoundException("User not found");
         }
 
-        UUID userPublicId = UUID.fromString(authentication.getName());
+        UUID userPublicId;
+
+        try {
+            userPublicId = UUID.fromString(authentication.getName());
+        } catch (Exception ex) {
+            throw new ResourceNotFoundException("User not found");
+        }
 
         return userRepository.findByPublicId(userPublicId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    }
+
+    private void safelyEvictRecommendationCache(User user) {
+        try {
+            if (user == null || user.getPublicId() == null) {
+                return;
+            }
+
+            recommendationCacheService.evictUserRecommendations(user.getPublicId());
+        } catch (Exception ex) {
+            log.warn(
+                    "Failed to evict recommendation cache after interaction. userId={}",
+                    user == null ? null : user.getId(),
+                    ex
+            );
+        }
     }
 }

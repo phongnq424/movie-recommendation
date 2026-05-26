@@ -1,6 +1,7 @@
 package com.example.movierecommendation.recommendation;
 
 import com.example.movierecommendation.recommendation.dto.RecommendationResponse;
+import com.example.movierecommendation.recommendation.scheduler.RecommendationPrecomputeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -16,6 +17,7 @@ import java.util.UUID;
 public class RecommendationController {
 
     private final RecommendationService recommendationService;
+    private final RecommendationPrecomputeService precomputeService;
 
     @GetMapping("/public")
     public List<RecommendationResponse> getPublicRecommendations(
@@ -33,5 +35,28 @@ public class RecommendationController {
         UUID currentUserPublicId = UUID.fromString(authentication.getName());
 
         return recommendationService.recommendForUser(currentUserPublicId, limit);
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PostMapping("/me/refresh")
+    public List<RecommendationResponse> refreshMyRecommendations(
+            Authentication authentication,
+            @RequestParam(defaultValue = "20") int limit
+    ) {
+        UUID currentUserPublicId = UUID.fromString(authentication.getName());
+
+        precomputeService.refreshUserByPublicId(currentUserPublicId);
+
+        return recommendationService.recommendForUser(currentUserPublicId, limit);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/admin/refresh-public")
+    public List<RecommendationResponse> refreshPublicRecommendations(
+            @RequestParam(defaultValue = "20") int limit
+    ) {
+        precomputeService.refreshPublic();
+
+        return recommendationService.recommendForAnonymous(limit);
     }
 }
