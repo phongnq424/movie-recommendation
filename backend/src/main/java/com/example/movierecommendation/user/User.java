@@ -3,6 +3,7 @@ package com.example.movierecommendation.user;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -11,6 +12,10 @@ import java.util.UUID;
         uniqueConstraints = {
                 @UniqueConstraint(columnNames = "email"),
                 @UniqueConstraint(columnNames = "public_id")
+        },
+        indexes = {
+                @Index(name = "idx_users_status", columnList = "status"),
+                @Index(name = "idx_users_last_login_at", columnList = "last_login_at")
         }
 )
 @Getter
@@ -44,6 +49,23 @@ public class User {
     @Column(nullable = false)
     private String status;
 
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
+
+    private LocalDateTime lastLoginAt;
+
+    private String lastLoginIp;
+
+    private String lastLoginDeviceType;
+
+    private String lastLoginBrowser;
+
+    private String lastLoginOs;
+
+    @Column(length = 1000)
+    private String lastLoginUserAgent;
+
     @PrePersist
     public void onCreate() {
         if (this.publicId == null) {
@@ -57,5 +79,20 @@ public class User {
         if (this.status == null || this.status.isBlank()) {
             this.status = "ACTIVE";
         }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        if (this.createdAt == null) {
+            this.createdAt = now;
+        }
+
+        if (this.updatedAt == null) {
+            this.updatedAt = now;
+        }
+    }
+
+    @PreUpdate
+    public void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 }

@@ -56,6 +56,7 @@ public class RecommendationSnapshot {
     @Column(nullable = false, length = 20)
     private String status;
 
+    @Builder.Default
     @OneToMany(
             mappedBy = "snapshot",
             cascade = CascadeType.ALL,

@@ -1,9 +1,8 @@
 package com.example.movierecommendation.user;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,8 +17,19 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findByFullNameContainingIgnoreCase(String keyword);
 
+    List<User> findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+            String fullName,
+            String email
+    );
+
     List<User> findByStatus(String status);
 
     List<User> findByRole(String role);
 
+    List<User> findByStatusAndLastLoginAtAfter(
+            String status,
+            LocalDateTime lastLoginAt
+    );
+
+    List<User> findByStatusAndLastLoginAtIsNull(String status);
 }

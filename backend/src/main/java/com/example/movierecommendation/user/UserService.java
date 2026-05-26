@@ -6,6 +6,7 @@ import com.example.movierecommendation.user.dto.UserUpdateRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,7 +34,17 @@ public class UserService {
     }
 
     public List<UserResponse> searchUsers(String keyword) {
-        return userRepository.findByFullNameContainingIgnoreCase(keyword)
+        if (keyword == null || keyword.isBlank()) {
+            return getAllUsers();
+        }
+
+        String normalizedKeyword = keyword.trim();
+
+        return userRepository
+                .findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                        normalizedKeyword,
+                        normalizedKeyword
+                )
                 .stream()
                 .map(UserResponse::from)
                 .toList();
@@ -42,17 +53,44 @@ public class UserService {
     public List<UserResponse> getUsersByStatus(String status) {
         validateStatus(status);
 
-        return userRepository.findByStatus(status.toUpperCase())
+        return userRepository.findByStatus(status.trim().toUpperCase())
                 .stream()
                 .map(UserResponse::from)
                 .toList();
     }
 
     public List<UserResponse> getUsersByRole(String role) {
-        return userRepository.findByRole(role.toUpperCase())
+        if (role == null || role.isBlank()) {
+            throw new RuntimeException("Role is required");
+        }
+
+        return userRepository.findByRole(role.trim().toUpperCase())
                 .stream()
                 .map(UserResponse::from)
                 .toList();
+    }
+
+    public List<UserResponse> getRecentlyActiveUsers(int days) {
+        int safeDays = days <= 0 ? 7 : Math.min(days, 90);
+
+        LocalDateTime fromTime = LocalDateTime.now().minusDays(safeDays);
+
+        return userRepository
+                .findByStatusAndLastLoginAtAfter(STATUS_ACTIVE, fromTime)
+                .stream()
+                .map(UserResponse::from)
+                .toList();
+    }
+
+    public List<User> getRecentlyActiveUserEntities(int days) {
+        int safeDays = days <= 0 ? 7 : Math.min(days, 90);
+
+        LocalDateTime fromTime = LocalDateTime.now().minusDays(safeDays);
+
+        return userRepository.findByStatusAndLastLoginAtAfter(
+                STATUS_ACTIVE,
+                fromTime
+        );
     }
 
     public UserResponse updateUserProfile(UUID publicId, UserUpdateRequest request) {
@@ -86,6 +124,10 @@ public class UserService {
     }
 
     public User getUserEntityByPublicId(UUID publicId) {
+        if (publicId == null) {
+            throw new RuntimeException("User public ID is required");
+        }
+
         return userRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
@@ -104,5 +146,4 @@ public class UserService {
             throw new RuntimeException("Status must be ACTIVE, INACTIVE, BANNED, or DELETED");
         }
     }
-
 }

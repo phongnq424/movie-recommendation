@@ -97,7 +97,7 @@ public class RecommendationCacheService {
 
             return result == null ? List.of() : result;
         } catch (RedisConnectionFailureException ex) {
-            log.warn("Redis unavailable while reading recommendation cache. key={}", key);
+            log.warn("Redis unavailable while reading recommendation cache. key={}, reason={}", key, ex.getMessage(), ex);
             return List.of();
         } catch (DataAccessException ex) {
             log.warn("Redis data access error while reading recommendation cache. key={}", key, ex);

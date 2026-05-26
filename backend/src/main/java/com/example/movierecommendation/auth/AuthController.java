@@ -5,6 +5,7 @@ import com.example.movierecommendation.auth.dto.LoginRequest;
 import com.example.movierecommendation.auth.dto.LogoutRequest;
 import com.example.movierecommendation.auth.dto.RefreshTokenRequest;
 import com.example.movierecommendation.auth.dto.RegisterRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -23,8 +24,14 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
+    public AuthResponse login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpServletRequest
+    ) {
+        return authService.login(
+                request,
+                LoginMetadata.from(httpServletRequest)
+        );
     }
 
     @PostMapping("/refresh")

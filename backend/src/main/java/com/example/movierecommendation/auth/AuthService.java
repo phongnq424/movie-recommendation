@@ -15,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -23,6 +25,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
+    private final UserLoginAuditService userLoginAuditService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -54,13 +57,27 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResponse login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request, LoginMetadata metadata) {
         String normalizedEmail = request.getEmail().trim().toLowerCase();
 
         User user = userRepository.findByEmail(normalizedEmail)
-                .orElseThrow(() -> new BadRequestException("Invalid email or password"));
+                .orElseThrow(() -> {
+                    userLoginAuditService.recordFailedLogin(
+                            normalizedEmail,
+                            metadata,
+                            "Invalid email"
+                    );
+
+                    return new BadRequestException("Invalid email or password");
+                });
 
         if (!"ACTIVE".equals(user.getStatus())) {
+            userLoginAuditService.recordFailedLogin(
+                    normalizedEmail,
+                    metadata,
+                    "Account is not active"
+            );
+
             throw new ForbiddenException("Account is not active");
         }
 
@@ -70,14 +87,31 @@ public class AuthService {
         );
 
         if (!matched) {
+            userLoginAuditService.recordFailedLogin(
+                    normalizedEmail,
+                    metadata,
+                    "Invalid password"
+            );
+
             throw new BadRequestException("Invalid email or password");
         }
 
-        String accessToken = jwtService.generateAccessToken(user);
-        String refreshToken = refreshTokenService.createRefreshToken(user);
+        user.setLastLoginAt(LocalDateTime.now());
+        user.setLastLoginIp(metadata.getIpAddress());
+        user.setLastLoginUserAgent(metadata.getUserAgent());
+        user.setLastLoginDeviceType(metadata.getDeviceType());
+        user.setLastLoginBrowser(metadata.getBrowser());
+        user.setLastLoginOs(metadata.getOperatingSystem());
+
+        User savedUser = userRepository.save(user);
+
+        userLoginAuditService.recordSuccessfulLogin(savedUser, metadata);
+
+        String accessToken = jwtService.generateAccessToken(savedUser);
+        String refreshToken = refreshTokenService.createRefreshToken(savedUser);
 
         return AuthResponse.from(
-                user,
+                savedUser,
                 "Login successfully",
                 accessToken,
                 refreshToken

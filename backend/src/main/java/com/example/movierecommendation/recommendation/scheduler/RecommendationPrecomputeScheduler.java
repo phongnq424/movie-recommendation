@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -22,7 +23,7 @@ public class RecommendationPrecomputeScheduler {
     private final UserRepository userRepository;
     private final RecommendationPrecomputeService precomputeService;
 
-    @Scheduled(cron = "${app.recommendation.cron:0 0 */6 * * *}")
+    @Scheduled(cron = "${app.recommendation.cron}")
     public void refreshRecommendationSnapshots() {
         log.info("Start scheduled recommendation snapshot refresh.");
 
@@ -31,7 +32,10 @@ public class RecommendationPrecomputeScheduler {
         List<User> activeUsers;
 
         try {
-            activeUsers = userRepository.findByStatus("ACTIVE");
+            activeUsers = userRepository.findByStatusAndLastLoginAtAfter(
+                    "ACTIVE",
+                    LocalDateTime.now().minusDays(15)
+            );
         } catch (Exception ex) {
             log.warn("Cannot load active users for recommendation snapshot refresh.", ex);
             return;
