@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Film, Users, Clapperboard, Layers, Activity, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import axiosClient from '@/services/axios';
+import AdminActivityLogs from '../_components/AdminActivityLogs';
 
 export default function AdminDashboardPage() {
   const { data: stats, isLoading } = useQuery({
@@ -135,6 +136,11 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* NHẬT KÝ HOẠT ĐỘNG HỆ THỐNG (MOCK WIDGET) */}
+      <div className="pt-2">
+        <AdminActivityLogs />
       </div>
     </div>
   );
