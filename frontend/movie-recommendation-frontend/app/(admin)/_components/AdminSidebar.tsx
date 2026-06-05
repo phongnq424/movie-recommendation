@@ -7,7 +7,8 @@ import {
   Users, 
   UserCircle, 
   LayoutDashboard,
-  LogOut
+  LogOut,
+  Settings
 } from 'lucide-react';
 import Cookies from 'js-cookie';
 import { useRouter, usePathname } from 'next/navigation';
@@ -31,6 +32,7 @@ export default function AdminSidebar() {
     { name: 'Thể loại (Genres)', href: '/admin/genres', icon: Tags },
     { name: 'Diễn viên (Actors)', href: '/admin/actors', icon: UserCircle },
     { name: 'Người dùng (Users)', href: '/admin/users', icon: Users },
+    { name: 'Cấu hình (Settings)', href: '/admin/settings', icon: Settings },
   ];
 
   return (
