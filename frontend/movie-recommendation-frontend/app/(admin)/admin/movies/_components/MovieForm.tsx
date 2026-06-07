@@ -12,8 +12,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CheckCircle, Loader2 } from 'lucide-react';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
 type ActorEntry = { actorPublicId: string; characterName: string; mainCast: boolean };
 
 type MovieInfoFields = {
@@ -31,12 +29,8 @@ type MovieInfoFields = {
   status: MovieStatus;
 };
 
-// ─── Shared styles ────────────────────────────────────────────────────────────
-
 const sectionClass = 'space-y-4 rounded-xl border border-white/10 bg-[#0d0d10] p-6';
 const sectionHeaderClass = 'flex items-center justify-between border-b border-white/10 pb-3';
-
-// ─── SaveButton helper ────────────────────────────────────────────────────────
 
 function SectionSaveButton({
   isPending,
@@ -68,8 +62,6 @@ function SectionSaveButton({
   );
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export default function MovieForm({
   initialData = null,
   movieId = null,
@@ -81,7 +73,6 @@ export default function MovieForm({
   const queryClient = useQueryClient();
   const isEditing = !!movieId;
 
-  // ── Movie info state ──────────────────────────────────────────────────────
   const [info, setInfo] = useState<MovieInfoFields>({
     title: '',
     originalTitle: '',
@@ -97,13 +88,10 @@ export default function MovieForm({
     status: 'DRAFT',
   });
 
-  // ── Genres state ──────────────────────────────────────────────────────────
   const [genreIds, setGenreIds] = useState<string[]>([]);
 
-  // ── Actors state ──────────────────────────────────────────────────────────
   const [actors, setActors] = useState<ActorEntry[]>([]);
 
-  // ── Populate from initialData ─────────────────────────────────────────────
   useEffect(() => {
     if (!initialData) return;
     setInfo({
@@ -130,7 +118,6 @@ export default function MovieForm({
     );
   }, [initialData]);
 
-  // ── Reference data ────────────────────────────────────────────────────────
   const { data: genres = [] } = useQuery({
     queryKey: ['genres', 'all'],
     queryFn: () => genreService.getAllGenres(),
@@ -141,7 +128,6 @@ export default function MovieForm({
     queryFn: () => actorService.getAllActors(),
   });
 
-  // ── Mutation 1 – movie info ───────────────────────────────────────────────
   const infoMutation = useMutation({
     mutationFn: async (data: MovieInfoFields) => {
       if (isEditing) {
@@ -165,7 +151,6 @@ export default function MovieForm({
     infoMutation.mutate(info);
   };
 
-  // ── Mutation 2 – genres ───────────────────────────────────────────────────
   const genreMutation = useMutation({
     mutationFn: () => movieService.setGenresForMovie(movieId!, genreIds),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['movies'] }),
@@ -176,7 +161,6 @@ export default function MovieForm({
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
 
-  // ── Mutation 3 – actors ───────────────────────────────────────────────────
   const actorMutation = useMutation({
     mutationFn: () =>
       movieService.setActorsForMovie(
@@ -204,7 +188,6 @@ export default function MovieForm({
       return next;
     });
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
 
@@ -343,8 +326,8 @@ export default function MovieForm({
                   key={genre.publicId}
                   onClick={() => handleGenreToggle(genre.publicId)}
                   className={`cursor-pointer px-3 py-1.5 rounded-full text-sm border transition-colors ${genreIds.includes(genre.publicId)
-                      ? 'bg-red-600/20 border-red-500 text-red-400'
-                      : 'bg-white/5 border-white/10 text-zinc-400 hover:bg-white/10'
+                    ? 'bg-red-600/20 border-red-500 text-red-400'
+                    : 'bg-white/5 border-white/10 text-zinc-400 hover:bg-white/10'
                     }`}
                 >
                   {genre.name}
