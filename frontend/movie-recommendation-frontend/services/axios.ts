@@ -79,6 +79,9 @@ axiosClient.interceptors.response.use(
             Cookies.set('access_token', accessToken, { expires: 1, path: '/' });
             Cookies.set('refresh_token', newRefreshToken, { expires: 7, path: '/' });
 
+            localStorage.setItem('access_token', accessToken);
+            localStorage.setItem('refresh_token', newRefreshToken);
+
             axiosClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
             onRefreshed(accessToken);
 
