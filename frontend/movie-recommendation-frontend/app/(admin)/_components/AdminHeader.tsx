@@ -7,7 +7,6 @@ export default function AdminHeader() {
   const [userFullName, setUserFullName] = useState<string>('Admin User');
 
   useEffect(() => {
-    // Read user_info from localStorage (if client side)
     const userInfoStr = localStorage.getItem('user_info');
     if (userInfoStr) {
       try {
@@ -24,7 +23,6 @@ export default function AdminHeader() {
   return (
     <header className="h-16 border-b border-white/10 bg-[#08080a] flex items-center justify-between px-6">
       <div className="flex items-center gap-4">
-        {/* Mobile menu toggle would go here */}
         <button className="lg:hidden text-zinc-400 hover:text-white">
           <Menu size={24} />
         </button>
