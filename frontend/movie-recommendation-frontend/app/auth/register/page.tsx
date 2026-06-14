@@ -3,7 +3,16 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, User, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import {
+    Mail,
+    Lock,
+    User,
+    ArrowRight,
+    AlertCircle,
+    Loader2,
+    Eye,
+    EyeOff,
+} from 'lucide-react';
 import { authService } from '@/services/auth.service';
 import { RegisterRequest } from '@/types/auth';
 
@@ -38,7 +47,6 @@ export default function RegisterPage() {
         setIsLoading(true);
 
         try {
-            // Validation
             if (!formData.fullName || !formData.email || !formData.password) {
                 setError('Vui lòng nhập đầy đủ thông tin');
                 setIsLoading(false);
@@ -64,11 +72,11 @@ export default function RegisterPage() {
             localStorage.setItem('user_info', JSON.stringify({
                 userPublicId: payload.userPublicId,
                 fullName: payload.fullName,
-                role: payload.role,
+                email: payload.email,
             }));
+
             window.dispatchEvent(new Event('auth-change'));
 
-            // Redirect to home
             router.push('/');
         } catch (err: any) {
             const errorMessage = err?.response?.data?.message ||
@@ -82,11 +90,9 @@ export default function RegisterPage() {
 
     return (
         <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#08080a] text-white p-5">
-            {/* Background Effects */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(185,28,28,0.15),transparent_40rem)]" />
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,8,10,0.1)_0%,#08080a_100%)]" />
 
-            {/* Register Card */}
             <div className="relative z-10 w-full max-w-md rounded-[34px] border border-white/10 bg-[#111114]/80 p-8 sm:p-10 shadow-2xl shadow-black/50 backdrop-blur-xl">
                 <div className="mb-8 text-center">
                     <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full border border-red-500/30 bg-red-600/15 px-4 py-2 text-sm font-semibold text-red-100">
@@ -175,9 +181,19 @@ export default function RegisterPage() {
                                 value={formData.password}
                                 onChange={handleChange}
                                 disabled={isLoading}
-                                className="w-full rounded-2xl border border-white/10 bg-white/5 py-3 pl-11 pr-4 text-white placeholder-zinc-500 outline-none transition focus:border-[#c91d1d] focus:bg-white/10 disabled:opacity-50"
+                                className="w-full rounded-2xl border border-white/10 bg-white/5 py-3 pl-11 pr-12 text-white placeholder-zinc-500 outline-none transition focus:border-[#c91d1d] focus:bg-white/10 disabled:opacity-50"
                                 required
                             />
+
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(prev => !prev)}
+                                disabled={isLoading}
+                                className="absolute inset-y-0 right-0 flex items-center pr-4 text-zinc-500 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                            >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
                         </div>
                     </div>
 
@@ -199,9 +215,19 @@ export default function RegisterPage() {
                                 value={confirmPassword}
                                 onChange={handleChange}
                                 disabled={isLoading}
-                                className="w-full rounded-2xl border border-white/10 bg-white/5 py-3 pl-11 pr-4 text-white placeholder-zinc-500 outline-none transition focus:border-[#c91d1d] focus:bg-white/10 disabled:opacity-50"
+                                className="w-full rounded-2xl border border-white/10 bg-white/5 py-3 pl-11 pr-12 text-white placeholder-zinc-500 outline-none transition focus:border-[#c91d1d] focus:bg-white/10 disabled:opacity-50"
                                 required
                             />
+
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(prev => !prev)}
+                                disabled={isLoading}
+                                className="absolute inset-y-0 right-0 flex items-center pr-4 text-zinc-500 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                aria-label={showPassword ? 'Ẩn mật khẩu xác nhận' : 'Hiện mật khẩu xác nhận'}
+                            >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
                         </div>
                     </div>
 
@@ -228,7 +254,7 @@ export default function RegisterPage() {
                 </form>
 
                 <p className="mt-8 text-center text-sm text-zinc-400">
-                    Đã có tài khoản?{" "}
+                    Đã có tài khoản?{' '}
                     <Link
                         href="/auth/login"
                         className="font-bold text-white transition hover:text-[#c91d1d]"

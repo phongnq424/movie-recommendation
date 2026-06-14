@@ -1,21 +1,45 @@
 'use client';
 
 import Link from 'next/link';
-import { 
-  Film, 
-  Tags, 
-  Users, 
-  UserCircle, 
+import {
+  Film,
+  Tags,
+  Users,
+  UserCircle,
   LayoutDashboard,
   LogOut,
-  Settings
+  Settings,
+  Shield,
 } from 'lucide-react';
 import Cookies from 'js-cookie';
 import { useRouter, usePathname } from 'next/navigation';
 
-export default function AdminSidebar() {
+type AdminSidebarProps = {
+  roles: string[];
+  permissions: string[];
+};
+
+function hasAnyPermission(
+  userPermissions: string[],
+  requiredPermissions: string[]
+) {
+  if (requiredPermissions.length === 0) {
+    return true;
+  }
+
+  return requiredPermissions.some((permission) =>
+    userPermissions.includes(permission)
+  );
+}
+
+export default function AdminSidebar({
+  roles,
+  permissions,
+}: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+
+  const isAdmin = roles.includes('ADMIN');
 
   const handleLogout = () => {
     Cookies.remove('access_token');
@@ -27,13 +51,53 @@ export default function AdminSidebar() {
   };
 
   const navItems = [
-    { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-    { name: 'Phim (Movies)', href: '/admin/movies', icon: Film },
-    { name: 'Thể loại (Genres)', href: '/admin/genres', icon: Tags },
-    { name: 'Diễn viên (Actors)', href: '/admin/actors', icon: UserCircle },
-    { name: 'Người dùng (Users)', href: '/admin/users', icon: Users },
-    { name: 'Cấu hình (Settings)', href: '/admin/settings', icon: Settings },
+    {
+      name: 'Dashboard',
+      href: '/admin',
+      icon: LayoutDashboard,
+      permissions: [],
+    },
+    {
+      name: 'Phim (Movies)',
+      href: '/admin/movies',
+      icon: Film,
+      permissions: ['MOVIE_READ_ADMIN'],
+    },
+    {
+      name: 'Thể loại (Genres)',
+      href: '/admin/genres',
+      icon: Tags,
+      permissions: ['GENRE_READ_ADMIN'],
+    },
+    {
+      name: 'Diễn viên (Actors)',
+      href: '/admin/actors',
+      icon: UserCircle,
+      permissions: ['ACTOR_READ_ADMIN'],
+    },
+    {
+      name: 'Người dùng (Users)',
+      href: '/admin/users',
+      icon: Users,
+      permissions: ['USER_READ'],
+    },
+    {
+      name: 'Cấu hình (Settings)',
+      href: '/admin/settings',
+      icon: Settings,
+      permissions: ['ROLE_READ', 'PERMISSION_READ'],
+    },
+    {
+      name: 'Phân quyền',
+      href: '/admin/rbac',
+      icon: Shield,
+      permissions: ['ROLE_READ', 'PERMISSION_READ', 'USER_ASSIGN_ROLE'],
+    }
   ];
+
+  const visibleNavItems = navItems.filter(
+    (item) => isAdmin || hasAnyPermission(permissions, item.permissions)
+  );
 
   return (
     <aside className="w-64 bg-zinc-950 border-r border-white/10 flex flex-col h-full">
@@ -49,17 +113,19 @@ export default function AdminSidebar() {
       </div>
 
       <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
+        {visibleNavItems.map((item) => {
+          const isActive =
+            pathname === item.href ||
+            (item.href !== '/admin' && pathname.startsWith(item.href));
+
           return (
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive 
-                  ? 'bg-red-600/10 text-red-500' 
-                  : 'text-zinc-400 hover:bg-white/5 hover:text-white'
-              }`}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
+                ? 'bg-red-600/10 text-red-500'
+                : 'text-zinc-400 hover:bg-white/5 hover:text-white'
+                }`}
             >
               <item.icon size={18} />
               {item.name}
