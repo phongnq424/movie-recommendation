@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+import static com.example.movierecommendation.rbac.PermissionCode.*;
+
 @RestController
 @RequestMapping("/api/actors")
 @RequiredArgsConstructor
@@ -19,47 +21,41 @@ public class ActorController {
 
     private final ActorService actorService;
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + ACTOR_READ_ADMIN + "')")
     @GetMapping
     public List<ActorResponse> getAllActors() {
         return actorService.getAllActors();
     }
 
-    /**
-     * Public API for frontend movie detail/cast display.
-     */
     @GetMapping("/active")
     public List<ActorResponse> getActiveActors() {
         return actorService.getActiveActors();
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + ACTOR_READ_ADMIN + "')")
     @GetMapping("/search")
     public List<ActorResponse> searchActors(@RequestParam String keyword) {
         return actorService.searchActors(keyword);
     }
 
-    /**
-     * Public API for homepage / featured actor section.
-     */
     @GetMapping("/featured")
     public List<ActorResponse> getFeaturedActors() {
         return actorService.getFeaturedActors();
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + ACTOR_READ_ADMIN + "')")
     @GetMapping("/{publicId}")
     public ActorResponse getActorByPublicId(@PathVariable UUID publicId) {
         return actorService.getActorByPublicId(publicId);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + ACTOR_CREATE + "')")
     @PostMapping
     public ActorResponse createActor(@Valid @RequestBody ActorRequest request) {
         return actorService.createActor(request);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + ACTOR_CREATE + "')")
     @PostMapping("/bulk")
     public List<ActorResponse> createActors(
             @Valid @RequestBody List<ActorRequest> requests
@@ -67,7 +63,7 @@ public class ActorController {
         return actorService.createActors(requests);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + ACTOR_UPDATE + "')")
     @PutMapping("/{publicId}")
     public ActorResponse updateActor(
             @PathVariable UUID publicId,
@@ -76,7 +72,7 @@ public class ActorController {
         return actorService.updateActor(publicId, request);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + ACTOR_CHANGE_STATUS + "')")
     @PutMapping("/{publicId}/status")
     public ActorResponse updateActorStatus(
             @PathVariable UUID publicId,
@@ -85,13 +81,13 @@ public class ActorController {
         return actorService.updateActorStatus(publicId, status);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + ACTOR_DELETE + "')")
     @DeleteMapping("/{publicId}")
     public ActorResponse deleteActor(@PathVariable UUID publicId) {
         return actorService.deleteActor(publicId);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + ACTOR_DELETE + "')")
     @PostMapping("/bulk-delete")
     public List<ActorResponse> deleteActors(
             @Valid @RequestBody BulkActorDeleteRequest request

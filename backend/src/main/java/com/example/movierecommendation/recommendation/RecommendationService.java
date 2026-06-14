@@ -7,11 +7,13 @@ import com.example.movierecommendation.recommendation.dto.RecommendationResponse
 import com.example.movierecommendation.recommendation.impression.RecommendationImpressionService;
 import com.example.movierecommendation.recommendation.ml.LearnedCandidateRetrievalService;
 import com.example.movierecommendation.recommendation.rerank.RecommendationReRankingService;
+import com.example.movierecommendation.recommendation.scheduler.RecommendationRefreshRequestedEvent;
 import com.example.movierecommendation.recommendation.snapshot.RecommendationSnapshotService;
 import com.example.movierecommendation.user.User;
 import com.example.movierecommendation.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -34,6 +36,7 @@ public class RecommendationService {
     private final RecommendationCacheService cacheService;
     private final RecommendationSnapshotService snapshotService;
     private final RecommendationProperties properties;
+    private final ApplicationEventPublisher eventPublisher;
 
     public List<RecommendationResponse> recommendForUser(UUID userPublicId, int limit) {
         int safeLimit = properties.safeLimit(limit);
@@ -51,28 +54,36 @@ public class RecommendationService {
             return cached;
         }
 
-        List<RecommendationResponse> snapshot = snapshotService.getValidSnapshot(
-                buildUserSnapshotKey(userPublicId),
+        String userSnapshotKey = buildUserSnapshotKey(userPublicId);
+
+        List<RecommendationResponse> freshSnapshot = snapshotService.getValidSnapshot(
+                userSnapshotKey,
                 safeLimit
         );
 
-        if (!snapshot.isEmpty()) {
-            cacheService.putUserRecommendations(userPublicId, safeLimit, snapshot);
-            safelyLogUserImpressions(userPublicId, snapshot, "PERSONALIZED_SNAPSHOT");
-            return snapshot;
+        if (!freshSnapshot.isEmpty()) {
+            cacheService.putUserRecommendations(userPublicId, safeLimit, freshSnapshot);
+            safelyLogUserImpressions(userPublicId, freshSnapshot, "PERSONALIZED_SNAPSHOT");
+            return freshSnapshot;
         }
 
-        List<RecommendationResponse> realtime = computeForUserRealtime(
-                userPublicId,
-                safeLimit,
-                true
+        List<RecommendationResponse> staleSnapshot = snapshotService.getAnyActiveSnapshot(
+                userSnapshotKey,
+                safeLimit
         );
 
-        if (!realtime.isEmpty()) {
-            cacheService.putUserRecommendations(userPublicId, safeLimit, realtime);
+        if (!staleSnapshot.isEmpty()) {
+            cacheService.putUserRecommendations(userPublicId, safeLimit, staleSnapshot);
+            safelyLogUserImpressions(userPublicId, staleSnapshot, "PERSONALIZED_STALE_SNAPSHOT");
+
+            requestUserRefresh(userPublicId, "STALE_SNAPSHOT_USED");
+
+            return staleSnapshot;
         }
 
-        return realtime;
+        requestUserRefresh(userPublicId, "NO_USER_SNAPSHOT");
+
+        return recommendForAnonymous(safeLimit);
     }
 
     public List<RecommendationResponse> recommendForAnonymous(int limit) {
@@ -258,5 +269,20 @@ public class RecommendationService {
         } catch (Exception ex) {
             log.warn("Failed to log recommendation impressions.", ex);
         }
+    }
+
+    private void requestUserRefresh(UUID userPublicId, String reason) {
+        boolean acquired = cacheService.tryAcquireUserRefreshLock(
+                userPublicId,
+                java.time.Duration.ofMinutes(10)
+        );
+
+        if (!acquired) {
+            return;
+        }
+
+        eventPublisher.publishEvent(
+                new RecommendationRefreshRequestedEvent(userPublicId, reason)
+        );
     }
 }

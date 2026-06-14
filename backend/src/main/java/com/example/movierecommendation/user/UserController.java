@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+import static com.example.movierecommendation.rbac.PermissionCode.*;
+
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
@@ -20,38 +22,38 @@ public class UserController {
 
     private final UserService userService;
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + USER_READ + "')")
     @GetMapping
     public List<UserResponse> getAllUsers() {
         return userService.getAllUsers();
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + USER_READ + "')")
     @GetMapping("/search")
     public List<UserResponse> searchUsers(@RequestParam String keyword) {
         return userService.searchUsers(keyword);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + USER_READ + "')")
     @GetMapping("/status/{status}")
     public List<UserResponse> getUsersByStatus(@PathVariable String status) {
         return userService.getUsersByStatus(status);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + USER_READ + "')")
     @GetMapping("/role/{role}")
     public List<UserResponse> getUsersByRole(@PathVariable String role) {
         return userService.getUsersByRole(role);
     }
 
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/me")
     public UserResponse getCurrentUser(Authentication authentication) {
         UUID currentUserPublicId = UUID.fromString(authentication.getName());
         return userService.getUserByPublicId(currentUserPublicId);
     }
 
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     @PutMapping("/me/profile")
     public UserResponse updateCurrentUserProfile(
             Authentication authentication,
@@ -61,13 +63,13 @@ public class UserController {
         return userService.updateUserProfile(currentUserPublicId, request);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + USER_READ + "')")
     @GetMapping("/{publicId}")
     public UserResponse getUserByPublicId(@PathVariable UUID publicId) {
         return userService.getUserByPublicId(publicId);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + USER_UPDATE + "')")
     @PutMapping("/{publicId}/profile")
     public UserResponse updateUserProfile(
             @PathVariable UUID publicId,
@@ -76,7 +78,7 @@ public class UserController {
         return userService.updateUserProfile(publicId, request);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + USER_CHANGE_STATUS + "')")
     @PutMapping("/{publicId}/status")
     public UserResponse updateUserStatus(
             @PathVariable UUID publicId,
@@ -85,7 +87,7 @@ public class UserController {
         return userService.updateUserStatus(publicId, request);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + USER_DELETE + "')")
     @DeleteMapping("/{publicId}")
     public String deleteUser(@PathVariable UUID publicId) {
         userService.deleteUser(publicId);

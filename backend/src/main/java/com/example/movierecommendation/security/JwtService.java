@@ -32,7 +32,6 @@ public class JwtService {
         return Jwts.builder()
                 .subject(user.getPublicId().toString())
                 .claim("email", user.getEmail())
-                .claim("role", user.getRole())
                 .claim("status", user.getStatus())
                 .issuedAt(now)
                 .expiration(expiryDate)
@@ -43,10 +42,6 @@ public class JwtService {
     public UUID extractUserPublicId(String token) {
         String subject = extractAllClaims(token).getSubject();
         return UUID.fromString(subject);
-    }
-
-    public String extractRole(String token) {
-        return extractAllClaims(token).get("role", String.class);
     }
 
     public boolean isTokenValid(String token) {

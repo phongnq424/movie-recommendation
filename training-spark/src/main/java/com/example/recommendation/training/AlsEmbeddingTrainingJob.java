@@ -296,7 +296,7 @@ public class AlsEmbeddingTrainingJob {
         Path path = Path.of(".env");
 
         if (!Files.exists(path)) {
-            throw new IllegalStateException(".env file not found in training-spark root.");
+            return properties;
         }
 
         try (BufferedReader reader = Files.newBufferedReader(path)) {
@@ -329,20 +329,26 @@ public class AlsEmbeddingTrainingJob {
         String value = get(properties, key, null);
 
         if (value == null || value.isBlank()) {
-            throw new IllegalStateException(key + " is required in .env");
+            throw new IllegalStateException(key + " is required");
         }
 
         return value;
     }
 
     private static String get(Properties properties, String key, String defaultValue) {
-        String value = properties.getProperty(key);
+        String envValue = System.getenv(key);
 
-        if (value == null || value.isBlank()) {
-            return defaultValue;
+        if (envValue != null && !envValue.isBlank()) {
+            return removeWrappingQuotes(envValue.trim());
         }
 
-        return value;
+        String fileValue = properties.getProperty(key);
+
+        if (fileValue != null && !fileValue.isBlank()) {
+            return removeWrappingQuotes(fileValue.trim());
+        }
+
+        return defaultValue;
     }
 
     private static String removeWrappingQuotes(String value) {

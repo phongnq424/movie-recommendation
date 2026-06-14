@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+import static com.example.movierecommendation.rbac.PermissionCode.MOVIE_CAST_MANAGE;
+import static com.example.movierecommendation.rbac.PermissionCode.MOVIE_GENRE_MANAGE;
+
 @RestController
 @RequestMapping("/api/movie-genres")
 @RequiredArgsConstructor
@@ -19,7 +22,7 @@ public class MovieGenreController {
 
     private final MovieGenreService movieGenreService;
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + MOVIE_GENRE_MANAGE + "')")
     @PostMapping
     public MovieGenreResponse addGenreToMovie(
             @Valid @RequestBody MovieGenreRequest request
@@ -50,7 +53,7 @@ public class MovieGenreController {
     /**
      * Admin API: remove genre khỏi movie.
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + MOVIE_GENRE_MANAGE + "')")
     @DeleteMapping("/movie/{moviePublicId}/genre/{genrePublicId}")
     public String removeGenreFromMovie(
             @PathVariable UUID moviePublicId,
@@ -63,7 +66,7 @@ public class MovieGenreController {
     /**
      * Admin API: bulk set genres cho một movie.
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + MOVIE_GENRE_MANAGE + "')")
     @PutMapping("/movie/{moviePublicId}")
     public List<MovieGenreResponse> setGenresForMovie(
             @PathVariable UUID moviePublicId,

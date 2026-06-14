@@ -1,9 +1,12 @@
 package com.example.movierecommendation.user;
 
+import com.example.movierecommendation.rbac.Role;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -41,9 +44,6 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @Column(nullable = false)
-    private String role;
-
     private String avatarUrl;
 
     @Column(nullable = false)
@@ -66,14 +66,24 @@ public class User {
     @Column(length = 1000)
     private String lastLoginUserAgent;
 
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "user_roles",
+            joinColumns = @JoinColumn(name = "user_id", nullable = false),
+            inverseJoinColumns = @JoinColumn(name = "role_id", nullable = false),
+            uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "role_id"}),
+            indexes = {
+                    @Index(name = "idx_user_roles_user_id", columnList = "user_id"),
+                    @Index(name = "idx_user_roles_role_id", columnList = "role_id")
+            }
+    )
+    @Builder.Default
+    private Set<Role> roles = new HashSet<>();
+
     @PrePersist
     public void onCreate() {
         if (this.publicId == null) {
             this.publicId = UUID.randomUUID();
-        }
-
-        if (this.role == null || this.role.isBlank()) {
-            this.role = "USER";
         }
 
         if (this.status == null || this.status.isBlank()) {

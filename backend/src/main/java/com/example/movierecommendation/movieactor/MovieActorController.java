@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+import static com.example.movierecommendation.rbac.PermissionCode.MOVIE_CAST_MANAGE;
+import static com.example.movierecommendation.rbac.PermissionCode.MOVIE_CREATE;
+
 @RestController
 @RequestMapping("/api/movie-actors")
 @RequiredArgsConstructor
@@ -19,7 +22,7 @@ public class MovieActorController {
 
     private final MovieActorService movieActorService;
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + MOVIE_CAST_MANAGE + "')")
     @PostMapping
     public MovieActorResponse addActorToMovie(
             @Valid @RequestBody MovieActorRequest request
@@ -50,7 +53,7 @@ public class MovieActorController {
     /**
      * Admin API: cập nhật thông tin vai diễn của actor trong movie.
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + MOVIE_CAST_MANAGE + "')")
     @PutMapping
     public MovieActorResponse updateMovieActor(
             @Valid @RequestBody MovieActorRequest request
@@ -61,7 +64,7 @@ public class MovieActorController {
     /**
      * Admin API: remove một actor khỏi một movie.
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + MOVIE_CAST_MANAGE + "')")
     @DeleteMapping("/movie/{moviePublicId}/actor/{actorPublicId}")
     public String removeActorFromMovie(
             @PathVariable UUID moviePublicId,
@@ -74,7 +77,7 @@ public class MovieActorController {
     /**
      * Admin API: bulk set cast cho một movie.
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + MOVIE_CAST_MANAGE + "')")
     @PutMapping("/movie/{moviePublicId}")
     public List<MovieActorResponse> setActorsForMovie(
             @PathVariable UUID moviePublicId,

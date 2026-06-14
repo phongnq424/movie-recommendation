@@ -17,5 +17,11 @@ public interface RecommendationSnapshotRepository
     );
 
     @EntityGraph(attributePaths = "items")
+    Optional<RecommendationSnapshot> findBySnapshotKeyAndStatus(
+            String snapshotKey,
+            String status
+    );
+
+    @EntityGraph(attributePaths = "items")
     Optional<RecommendationSnapshot> findBySnapshotKey(String snapshotKey);
 }

@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+import static com.example.movierecommendation.rbac.PermissionCode.*;
+
 @RestController
 @RequestMapping("/api/recommendations")
 @RequiredArgsConstructor
@@ -26,7 +28,7 @@ public class RecommendationController {
         return recommendationService.recommendForAnonymous(limit);
     }
 
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PreAuthorize("hasAuthority('" + RECOMMENDATION_READ_OWN + "')")
     @GetMapping("/me")
     public List<RecommendationResponse> getMyRecommendations(
             Authentication authentication,
@@ -37,7 +39,7 @@ public class RecommendationController {
         return recommendationService.recommendForUser(currentUserPublicId, limit);
     }
 
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PreAuthorize("hasAuthority('" + RECOMMENDATION_REFRESH_OWN + "')")
     @PostMapping("/me/refresh")
     public List<RecommendationResponse> refreshMyRecommendations(
             Authentication authentication,
@@ -50,7 +52,7 @@ public class RecommendationController {
         return recommendationService.recommendForUser(currentUserPublicId, limit);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + RECOMMENDATION_REFRESH_PUBLIC + "')")
     @PostMapping("/admin/refresh-public")
     public List<RecommendationResponse> refreshPublicRecommendations(
             @RequestParam(defaultValue = "20") int limit

@@ -13,6 +13,8 @@ import com.example.movierecommendation.common.PageResponse;
 import java.util.List;
 import java.util.UUID;
 
+import static com.example.movierecommendation.rbac.PermissionCode.*;
+
 @RestController
 @RequestMapping("/api/movies")
 @RequiredArgsConstructor
@@ -21,7 +23,7 @@ public class MovieController {
 
     private final MovieService movieService;
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + MOVIE_READ_ADMIN + "')")
     @GetMapping
     public PageResponse<MovieResponse> getAllMovies(
             @RequestParam(defaultValue = "0") int page,
@@ -50,7 +52,7 @@ public class MovieController {
         return movieService.searchPublishedMovies(keyword, page, size);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + MOVIE_READ_ADMIN + "')")
     @GetMapping("/search")
     public PageResponse<MovieResponse> searchMovies(
             @RequestParam String keyword,
@@ -76,25 +78,25 @@ public class MovieController {
         return movieService.getMovieDetailBySlug(slug);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + MOVIE_READ_ADMIN + "')")
     @GetMapping("/{publicId}")
     public MovieResponse getMovieByPublicId(@PathVariable UUID publicId) {
         return movieService.getMovieByPublicId(publicId);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + MOVIE_READ_ADMIN + "')")
     @GetMapping("/{publicId}/detail")
     public MovieDetailResponse getMovieDetailByPublicId(@PathVariable UUID publicId) {
         return movieService.getMovieDetailByPublicId(publicId);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + MOVIE_CREATE + "')")
     @PostMapping
     public MovieResponse createMovie(@Valid @RequestBody MovieRequest request) {
         return movieService.createMovie(request);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + MOVIE_CREATE + "')")
     @PostMapping("/bulk")
     public List<MovieResponse> createMovies(
             @Valid @RequestBody List<MovieRequest> requests
@@ -102,7 +104,7 @@ public class MovieController {
         return movieService.createMovies(requests);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + MOVIE_UPDATE + "')")
     @PutMapping("/{publicId}")
     public MovieResponse updateMovie(
             @PathVariable UUID publicId,
@@ -111,7 +113,7 @@ public class MovieController {
         return movieService.updateMovie(publicId, request);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + MOVIE_CHANGE_STATUS + "')")
     @PutMapping("/{publicId}/status")
     public MovieResponse updateMovieStatus(
             @PathVariable UUID publicId,
@@ -120,19 +122,20 @@ public class MovieController {
         return movieService.updateMovieStatus(publicId, status);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + MOVIE_DELETE + "')")
     @DeleteMapping("/{publicId}")
     public MovieResponse deleteMovie(@PathVariable UUID publicId) {
         return movieService.deleteMovie(publicId);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + MOVIE_DELETE + "')")
     @PostMapping("/bulk-delete")
     public List<MovieResponse> deleteMovies(
             @Valid @RequestBody BulkMovieDeleteRequest request
     ) {
         return movieService.deleteMovies(request.getPublicIds());
     }
+
     @PostMapping("/{publicId}/view")
     public MovieResponse increaseViewCount(@PathVariable UUID publicId) {
         return movieService.increaseViewCount(publicId);

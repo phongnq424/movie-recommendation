@@ -7,13 +7,15 @@ import com.example.movierecommendation.movie.MovieRepository;
 import com.example.movierecommendation.movieactor.dto.MovieActorItemRequest;
 import com.example.movierecommendation.movieactor.dto.MovieActorRequest;
 import com.example.movierecommendation.movieactor.dto.MovieActorResponse;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -25,6 +27,7 @@ public class MovieActorService {
     private final MovieRepository movieRepository;
     private final ActorRepository actorRepository;
 
+    @Transactional
     public MovieActorResponse addActorToMovie(MovieActorRequest request) {
         validateMovieActorRequest(request);
 
@@ -49,6 +52,7 @@ public class MovieActorService {
         return MovieActorResponse.from(movieActorRepository.save(movieActor));
     }
 
+    @Transactional(readOnly = true)
     public List<MovieActorResponse> getActorsByMovie(UUID moviePublicId) {
         Movie movie = getMovieByPublicId(moviePublicId);
 
@@ -58,6 +62,7 @@ public class MovieActorService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<MovieActorResponse> getMoviesByActor(UUID actorPublicId) {
         Actor actor = getActorByPublicId(actorPublicId);
 
@@ -67,6 +72,7 @@ public class MovieActorService {
                 .toList();
     }
 
+    @Transactional
     public MovieActorResponse updateMovieActor(MovieActorRequest request) {
         validateMovieActorRequest(request);
 
@@ -84,6 +90,7 @@ public class MovieActorService {
         return MovieActorResponse.from(movieActorRepository.save(movieActor));
     }
 
+    @Transactional
     public void removeActorFromMovie(UUID moviePublicId, UUID actorPublicId) {
         Movie movie = getMovieByPublicId(moviePublicId);
         Actor actor = getActorByPublicId(actorPublicId);
@@ -98,7 +105,16 @@ public class MovieActorService {
     /**
      * Bulk set cast cho một phim.
      * Ý nghĩa: danh sách cast hiện tại của phim = request.actors.
-     * Cast cũ bị xóa khỏi bảng liên kết, sau đó tạo lại cast mới.
+     *
+     * Cách làm production:
+     * - Không delete toàn bộ rồi insert lại.
+     * - Actor đã có thì update characterName, castOrder, mainCast.
+     * - Actor không còn trong request thì xóa.
+     * - Actor mới thì insert.
+     *
+     * Lý do:
+     * Nếu delete all rồi insert lại trong cùng transaction, Hibernate có thể insert trước khi flush delete,
+     * gây lỗi unique constraint: Key (movie_id, actor_id) already exists.
      */
     @Transactional
     public List<MovieActorResponse> setActorsForMovie(
@@ -113,11 +129,51 @@ public class MovieActorService {
 
         validateDuplicateActors(actorRequests);
 
-        movieActorRepository.deleteByMovieId(movie.getId());
+        List<MovieActor> existingMovieActors =
+                movieActorRepository.findByMovieIdOrderByCastOrderAsc(movie.getId());
 
-        List<MovieActor> movieActors = actorRequests.stream()
+        Map<UUID, MovieActor> existingMovieActorByActorPublicId = new HashMap<>();
+
+        for (MovieActor movieActor : existingMovieActors) {
+            existingMovieActorByActorPublicId.put(
+                    movieActor.getActor().getPublicId(),
+                    movieActor
+            );
+        }
+
+        Set<UUID> requestedActorPublicIds = new HashSet<>();
+
+        for (MovieActorItemRequest request : actorRequests) {
+            validateMovieActorItemRequest(request);
+            requestedActorPublicIds.add(request.getActorPublicId());
+        }
+
+        List<MovieActor> movieActorsToDelete = existingMovieActors.stream()
+                .filter(movieActor -> !requestedActorPublicIds.contains(
+                        movieActor.getActor().getPublicId()
+                ))
+                .toList();
+
+        if (!movieActorsToDelete.isEmpty()) {
+            movieActorRepository.deleteAll(movieActorsToDelete);
+        }
+
+        List<MovieActor> movieActorsToSave = actorRequests.stream()
                 .map(request -> {
                     validateMovieActorItemRequest(request);
+
+                    MovieActor existingMovieActor =
+                            existingMovieActorByActorPublicId.get(request.getActorPublicId());
+
+                    if (existingMovieActor != null) {
+                        existingMovieActor.setCharacterName(request.getCharacterName());
+                        existingMovieActor.setCastOrder(request.getCastOrder());
+                        existingMovieActor.setMainCast(
+                                request.getMainCast() != null ? request.getMainCast() : false
+                        );
+
+                        return existingMovieActor;
+                    }
 
                     Actor actor = getActorByPublicId(request.getActorPublicId());
 
@@ -135,7 +191,9 @@ public class MovieActorService {
                 ))
                 .toList();
 
-        return movieActorRepository.saveAll(movieActors)
+        movieActorRepository.saveAll(movieActorsToSave);
+
+        return movieActorRepository.findByMovieIdOrderByCastOrderAsc(movie.getId())
                 .stream()
                 .map(MovieActorResponse::from)
                 .toList();

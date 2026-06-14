@@ -1,89 +1,59 @@
 package com.example.movierecommendation.recommendation.rerank;
 
+import com.example.recommendation.core.model.RecommendationItem;
+import com.example.recommendation.core.model.ScoreBreakdown;
+import com.example.recommendation.core.model.ScoringMovie;
+import com.example.recommendation.core.rerank.GenreDiversityReRanker;
 import com.example.movierecommendation.moviegenre.MovieGenreRepository;
 import com.example.movierecommendation.recommendation.dto.RecommendationResponse;
+import com.example.movierecommendation.recommendation.dto.RecommendationScoreBreakdown;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class RecommendationReRankingService {
 
-    private static final int MAX_SAME_PRIMARY_GENRE_IN_TOP = 3;
-
     private final MovieGenreRepository movieGenreRepository;
+    private final GenreDiversityReRanker coreReRanker = new GenreDiversityReRanker();
 
     public List<RecommendationResponse> reRank(List<RecommendationResponse> rankedResults, int limit) {
         if (rankedResults == null || rankedResults.isEmpty()) {
             return List.of();
         }
 
-        int safeLimit = normalizeLimit(limit, rankedResults.size());
+        Map<String, Long> primaryGenreByItemKey = loadPrimaryGenreByItemKey(rankedResults);
 
-        List<RecommendationResponse> deduplicated = removeDuplicates(rankedResults);
-        Map<UUID, Long> primaryGenreByMoviePublicId = loadPrimaryGenreByMoviePublicId(deduplicated);
+        Map<String, RecommendationResponse> responseByItemKey = rankedResults.stream()
+                .filter(Objects::nonNull)
+                .filter(response -> response.getMoviePublicId() != null)
+                .collect(Collectors.toMap(
+                        response -> response.getMoviePublicId().toString(),
+                        response -> response,
+                        (first, ignored) -> first
+                ));
 
-        List<RecommendationResponse> finalList = new ArrayList<>();
-        Map<Long, Integer> genreCount = new HashMap<>();
-
-        for (RecommendationResponse response : deduplicated) {
-            UUID moviePublicId = response.getMoviePublicId();
-
-            if (moviePublicId == null) {
-                continue;
-            }
-
-            Long genreId = primaryGenreByMoviePublicId.get(moviePublicId);
-
-            if (genreId != null) {
-                int count = genreCount.getOrDefault(genreId, 0);
-
-                if (count >= MAX_SAME_PRIMARY_GENRE_IN_TOP && finalList.size() < safeLimit / 2) {
-                    continue;
-                }
-
-                genreCount.put(genreId, count + 1);
-            }
-
-            finalList.add(response);
-
-            if (finalList.size() >= safeLimit) {
-                return finalList;
-            }
-        }
-
-        if (finalList.size() < safeLimit) {
-            fillRemainingResults(finalList, deduplicated, safeLimit);
-        }
-
-        return finalList;
+        return coreReRanker.reRank(
+                        rankedResults.stream()
+                                .map(this::toCoreItem)
+                                .filter(Objects::nonNull)
+                                .toList(),
+                        primaryGenreByItemKey,
+                        limit
+                )
+                .stream()
+                .map(item -> responseByItemKey.get(item.itemKey()))
+                .filter(Objects::nonNull)
+                .toList();
     }
 
-    private int normalizeLimit(int limit, int availableSize) {
-        if (limit <= 0) {
-            return Math.min(20, availableSize);
-        }
-
-        return Math.min(limit, availableSize);
-    }
-
-    private List<RecommendationResponse> removeDuplicates(List<RecommendationResponse> rankedResults) {
-        Map<UUID, RecommendationResponse> map = new LinkedHashMap<>();
-
-        for (RecommendationResponse response : rankedResults) {
-            if (response == null || response.getMoviePublicId() == null) {
-                continue;
-            }
-
-            map.putIfAbsent(response.getMoviePublicId(), response);
-        }
-
-        return new ArrayList<>(map.values());
-    }
-
-    private Map<UUID, Long> loadPrimaryGenreByMoviePublicId(List<RecommendationResponse> responses) {
+    private Map<String, Long> loadPrimaryGenreByItemKey(List<RecommendationResponse> responses) {
         List<UUID> moviePublicIds = responses.stream()
                 .filter(Objects::nonNull)
                 .map(RecommendationResponse::getMoviePublicId)
@@ -95,49 +65,60 @@ public class RecommendationReRankingService {
             return Map.of();
         }
 
-        List<Object[]> rows = movieGenreRepository.findPrimaryGenreIdsByMoviePublicIds(moviePublicIds);
-        Map<UUID, Long> result = new HashMap<>();
-
-        for (Object[] row : rows) {
-            UUID moviePublicId = (UUID) row[0];
-            Long genreId = ((Number) row[1]).longValue();
-
-            result.put(moviePublicId, genreId);
-        }
-
-        return result;
+        return movieGenreRepository.findPrimaryGenreIdsByMoviePublicIds(moviePublicIds)
+                .stream()
+                .filter(Objects::nonNull)
+                .filter(row -> row.length >= 2)
+                .collect(Collectors.toMap(
+                        row -> String.valueOf((UUID) row[0]),
+                        row -> ((Number) row[1]).longValue(),
+                        Math::min
+                ));
     }
 
-    private void fillRemainingResults(
-            List<RecommendationResponse> finalList,
-            List<RecommendationResponse> deduplicated,
-            int limit
-    ) {
-        Set<UUID> addedIds = new HashSet<>();
-
-        for (RecommendationResponse item : finalList) {
-            if (item.getMoviePublicId() != null) {
-                addedIds.add(item.getMoviePublicId());
-            }
+    private RecommendationItem toCoreItem(RecommendationResponse response) {
+        if (response == null || response.getMoviePublicId() == null) {
+            return null;
         }
 
-        for (RecommendationResponse response : deduplicated) {
-            UUID moviePublicId = response.getMoviePublicId();
+        ScoringMovie movie = ScoringMovie.of(
+                null,
+                response.getMoviePublicId().toString(),
+                response.getReleaseYear(),
+                response.getAverageRating(),
+                response.getRatingCount(),
+                response.getViewCount()
+        );
 
-            if (moviePublicId == null) {
-                continue;
-            }
+        return new RecommendationItem(
+                movie,
+                safeDouble(response.getFinalScore()),
+                toCoreBreakdown(response.getScoreBreakdown())
+        );
+    }
 
-            if (addedIds.contains(moviePublicId)) {
-                continue;
-            }
-
-            finalList.add(response);
-            addedIds.add(moviePublicId);
-
-            if (finalList.size() >= limit) {
-                return;
-            }
+    private ScoreBreakdown toCoreBreakdown(RecommendationScoreBreakdown breakdown) {
+        if (breakdown == null) {
+            return null;
         }
+
+        return new ScoreBreakdown(
+                safeDouble(breakdown.getContentScore()),
+                safeDouble(breakdown.getCollaborativeScore()),
+                safeDouble(breakdown.getPopularityScore()),
+                safeDouble(breakdown.getFreshnessScore()),
+                safeDouble(breakdown.getSentimentScore()),
+                safeDouble(breakdown.getNegativePenalty()),
+                safeDouble(breakdown.getContentWeight()),
+                safeDouble(breakdown.getCollaborativeWeight()),
+                safeDouble(breakdown.getPopularityWeight()),
+                safeDouble(breakdown.getFreshnessWeight()),
+                safeDouble(breakdown.getSentimentWeight()),
+                breakdown.getStrategy()
+        );
+    }
+
+    private double safeDouble(Double value) {
+        return value == null ? 0.0 : value;
     }
 }

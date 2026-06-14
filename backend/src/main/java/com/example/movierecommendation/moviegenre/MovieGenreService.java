@@ -6,9 +6,9 @@ import com.example.movierecommendation.movie.Movie;
 import com.example.movierecommendation.movie.MovieRepository;
 import com.example.movierecommendation.moviegenre.dto.MovieGenreRequest;
 import com.example.movierecommendation.moviegenre.dto.MovieGenreResponse;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
@@ -25,6 +25,7 @@ public class MovieGenreService {
     private final MovieRepository movieRepository;
     private final GenreRepository genreRepository;
 
+    @Transactional
     public MovieGenreResponse addGenreToMovie(MovieGenreRequest request) {
         validateMovieGenreRequest(request);
 
@@ -48,6 +49,7 @@ public class MovieGenreService {
         return MovieGenreResponse.from(movieGenreRepository.save(movieGenre));
     }
 
+    @Transactional(readOnly = true)
     public List<MovieGenreResponse> getGenresByMovie(UUID moviePublicId) {
         Movie movie = getMovieByPublicId(moviePublicId);
 
@@ -57,6 +59,7 @@ public class MovieGenreService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<MovieGenreResponse> getMoviesByGenre(UUID genrePublicId) {
         Genre genre = getGenreByPublicId(genrePublicId);
 
@@ -66,22 +69,18 @@ public class MovieGenreService {
                 .toList();
     }
 
+    @Transactional
     public void removeGenreFromMovie(UUID moviePublicId, UUID genrePublicId) {
         Movie movie = getMovieByPublicId(moviePublicId);
         Genre genre = getGenreByPublicId(genrePublicId);
 
-        if (!movieGenreRepository.existsByMovieIdAndGenreId(movie.getId(), genre.getId())) {
-            throw new RuntimeException("Genre does not exist in this movie");
-        }
+        MovieGenre movieGenre = movieGenreRepository
+                .findByMovieIdAndGenreId(movie.getId(), genre.getId())
+                .orElseThrow(() -> new RuntimeException("Genre does not exist in this movie"));
 
-        movieGenreRepository.deleteByMovieIdAndGenreId(movie.getId(), genre.getId());
+        movieGenreRepository.delete(movieGenre);
     }
 
-    /**
-     * Bulk set genres cho một phim.
-     * Ý nghĩa: danh sách genre hiện tại của phim = request.genrePublicIds.
-     * Genre cũ bị xóa khỏi bảng liên kết, sau đó tạo lại danh sách mới.
-     */
     @Transactional
     public List<MovieGenreResponse> setGenresForMovie(
             UUID moviePublicId,
@@ -95,9 +94,26 @@ public class MovieGenreService {
 
         validateDuplicateGenres(genrePublicIds);
 
-        movieGenreRepository.deleteByMovieId(movie.getId());
+        List<MovieGenre> existingMovieGenres = movieGenreRepository.findByMovieId(movie.getId());
 
-        List<MovieGenre> movieGenres = genrePublicIds.stream()
+        Set<UUID> requestedGenrePublicIds = new HashSet<>(genrePublicIds);
+
+        List<MovieGenre> movieGenresToDelete = existingMovieGenres.stream()
+                .filter(movieGenre -> !requestedGenrePublicIds.contains(
+                        movieGenre.getGenre().getPublicId()
+                ))
+                .toList();
+
+        if (!movieGenresToDelete.isEmpty()) {
+            movieGenreRepository.deleteAll(movieGenresToDelete);
+        }
+
+        Set<UUID> existingGenrePublicIds = existingMovieGenres.stream()
+                .map(movieGenre -> movieGenre.getGenre().getPublicId())
+                .collect(HashSet::new, HashSet::add, HashSet::addAll);
+
+        List<MovieGenre> movieGenresToCreate = genrePublicIds.stream()
+                .filter(genrePublicId -> !existingGenrePublicIds.contains(genrePublicId))
                 .map(genrePublicId -> {
                     Genre genre = getGenreByPublicId(genrePublicId);
                     validateGenreAssignable(genre);
@@ -109,7 +125,11 @@ public class MovieGenreService {
                 })
                 .toList();
 
-        return movieGenreRepository.saveAll(movieGenres)
+        if (!movieGenresToCreate.isEmpty()) {
+            movieGenreRepository.saveAll(movieGenresToCreate);
+        }
+
+        return movieGenreRepository.findByMovieId(movie.getId())
                 .stream()
                 .map(MovieGenreResponse::from)
                 .toList();

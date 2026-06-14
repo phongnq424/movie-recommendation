@@ -10,10 +10,13 @@ import com.example.movierecommendation.common.exception.ForbiddenException;
 import com.example.movierecommendation.security.JwtService;
 import com.example.movierecommendation.user.User;
 import com.example.movierecommendation.user.UserRepository;
+import com.example.movierecommendation.rbac.Role;
+import com.example.movierecommendation.rbac.RoleRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
 
 import java.time.LocalDateTime;
 
@@ -26,6 +29,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final UserLoginAuditService userLoginAuditService;
+    private final RoleRepository roleRepository;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -35,13 +39,17 @@ public class AuthService {
             throw new ConflictException("Email already exists");
         }
 
+        Role defaultRole = roleRepository.findByName("USER")
+                .orElseThrow(() -> new IllegalStateException("Default USER role is not configured"));
+
         User user = User.builder()
                 .fullName(request.getFullName().trim())
                 .email(normalizedEmail)
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role("USER")
                 .status("ACTIVE")
                 .build();
+
+        user.getRoles().add(defaultRole);
 
         User savedUser = userRepository.save(user);
 

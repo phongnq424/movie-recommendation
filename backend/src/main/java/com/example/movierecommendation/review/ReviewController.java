@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+import static com.example.movierecommendation.rbac.PermissionCode.*;
+
 @RestController
 @RequestMapping("/api/reviews")
 @RequiredArgsConstructor
@@ -25,7 +27,7 @@ public class ReviewController {
      * Nếu user đã review phim này rồi thì cập nhật review cũ.
      * User hiện tại được lấy từ JWT, không lấy từ request body.
      */
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PreAuthorize("hasAuthority('" + REVIEW_UPDATE_OWN + "')")
     @PostMapping
     public ReviewResponse createOrUpdateReview(
             Authentication authentication,
@@ -48,7 +50,7 @@ public class ReviewController {
     /**
      * Admin API: lấy tất cả review của một phim, gồm PUBLISHED/HIDDEN/DELETED.
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + REVIEW_READ_ADMIN + "')")
     @GetMapping("/movie/{movieId}/all")
     public List<ReviewResponse> getAllReviewsByMovie(
             @PathVariable UUID movieId
@@ -69,7 +71,7 @@ public class ReviewController {
     /**
      * User API: lấy toàn bộ review của chính mình.
      */
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PreAuthorize("hasAuthority('" + REVIEW_READ_OWN + "')")
     @GetMapping("/me")
     public List<ReviewResponse> getMyReviews(Authentication authentication) {
         UUID currentUserPublicId = UUID.fromString(authentication.getName());
@@ -79,7 +81,7 @@ public class ReviewController {
     /**
      * Admin API: lấy tất cả review của một user.
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + REVIEW_READ_ADMIN + "')")
     @GetMapping("/user/{userId}/all")
     public List<ReviewResponse> getAllReviewsByUser(
             @PathVariable UUID userId
@@ -91,7 +93,7 @@ public class ReviewController {
      * User/Admin API:
      * Review PUBLISHED có thể xem, còn HIDDEN/DELETED do service kiểm tra owner/admin.
      */
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PreAuthorize("hasAuthority('" + REVIEW_READ_OWN + "')")
     @GetMapping("/{id}")
     public ReviewResponse getReviewById(
             Authentication authentication,
@@ -111,7 +113,7 @@ public class ReviewController {
      * User cập nhật review của chính mình.
      * Admin có thể cập nhật bất kỳ review nào.
      */
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PreAuthorize("hasAuthority('" + REVIEW_WRITE + "')")
     @PutMapping("/{id}")
     public ReviewResponse updateReview(
             Authentication authentication,
@@ -130,7 +132,7 @@ public class ReviewController {
     /**
      * Admin API: cập nhật trạng thái review: PUBLISHED/HIDDEN/DELETED.
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + REVIEW_MODERATE + "')")
     @PutMapping("/{id}/status")
     public ReviewResponse updateReviewStatus(
             @PathVariable Long id,
@@ -144,7 +146,7 @@ public class ReviewController {
      * User xóa mềm review của chính mình.
      * Admin có thể xóa mềm bất kỳ review nào.
      */
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PreAuthorize("hasAuthority('" + REVIEW_DELETE_ANY + "')")
     @DeleteMapping("/{id}")
     public String softDeleteReview(
             Authentication authentication,
@@ -152,11 +154,11 @@ public class ReviewController {
     ) {
         UUID currentUserPublicId = UUID.fromString(authentication.getName());
 
-        boolean isAdmin = authentication.getAuthorities()
+        boolean canModerateReview = authentication.getAuthorities()
                 .stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+                .anyMatch(a -> a.getAuthority().equals(REVIEW_MODERATE));
 
-        reviewService.softDeleteReview(id, currentUserPublicId, isAdmin);
+        reviewService.softDeleteReview(id, currentUserPublicId, canModerateReview);
         return "Review deleted successfully";
     }
 }

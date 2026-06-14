@@ -1,5 +1,6 @@
 package com.example.movierecommendation.user;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;
@@ -13,18 +14,27 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
 
+    @EntityGraph(attributePaths = {"roles", "roles.permissions"})
+    Optional<User> findWithRolesByPublicId(UUID publicId);
+
+    @EntityGraph(attributePaths = {"roles", "roles.permissions"})
+    Optional<User> findWithRolesByEmail(String email);
+
     boolean existsByEmail(String email);
 
     List<User> findByFullNameContainingIgnoreCase(String keyword);
 
+    @EntityGraph(attributePaths = {"roles", "roles.permissions"})
     List<User> findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
             String fullName,
             String email
     );
 
+    @EntityGraph(attributePaths = {"roles", "roles.permissions"})
     List<User> findByStatus(String status);
 
-    List<User> findByRole(String role);
+    @EntityGraph(attributePaths = {"roles", "roles.permissions"})
+    List<User> findDistinctByRoles_Name(String roleName);
 
     List<User> findByStatusAndLastLoginAtAfter(
             String status,

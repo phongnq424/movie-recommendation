@@ -185,4 +185,24 @@ public class RecommendationSnapshotService {
             return null;
         }
     }
+    public List<RecommendationResponse> getAnyActiveSnapshot(String snapshotKey, int limit) {
+        if (snapshotKey == null || snapshotKey.isBlank()) {
+            return List.of();
+        }
+
+        int safeLimit = properties.safeLimit(limit);
+
+        try {
+            return snapshotRepository
+                    .findBySnapshotKeyAndStatus(
+                            snapshotKey,
+                            STATUS_ACTIVE
+                    )
+                    .map(snapshot -> toResponses(snapshot, safeLimit))
+                    .orElse(List.of());
+        } catch (Exception ex) {
+            log.warn("Cannot read any active recommendation snapshot. snapshotKey={}", snapshotKey, ex);
+            return List.of();
+        }
+    }
 }

@@ -199,4 +199,24 @@ public class RecommendationCacheService {
             return DEFAULT_VERSION;
         }
     }
+    public boolean tryAcquireUserRefreshLock(UUID userPublicId, Duration ttl) {
+        if (!properties.isCacheEnabled() || userPublicId == null) {
+            return true;
+        }
+
+        String key = KEY_PREFIX + ":user:" + userPublicId + ":refresh-lock";
+
+        try {
+            Boolean acquired = redisTemplate.opsForValue().setIfAbsent(
+                    key,
+                    "1",
+                    ttl
+            );
+
+            return Boolean.TRUE.equals(acquired);
+        } catch (Exception ex) {
+            log.warn("Cannot acquire recommendation refresh lock. userPublicId={}", userPublicId, ex);
+            return true;
+        }
+    }
 }

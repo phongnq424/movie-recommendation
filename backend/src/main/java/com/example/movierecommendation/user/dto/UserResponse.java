@@ -1,11 +1,15 @@
 package com.example.movierecommendation.user.dto;
 
+import com.example.movierecommendation.rbac.Permission;
+import com.example.movierecommendation.rbac.Role;
 import com.example.movierecommendation.user.User;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -16,7 +20,8 @@ public class UserResponse {
     private UUID publicId;
     private String fullName;
     private String email;
-    private String role;
+    private List<String> roles;
+    private List<String> permissions;
     private String avatarUrl;
     private String status;
 
@@ -31,11 +36,26 @@ public class UserResponse {
     private String lastLoginUserAgent;
 
     public static UserResponse from(User user) {
+        List<String> roles = user.getRoles()
+                .stream()
+                .map(Role::getName)
+                .sorted()
+                .toList();
+
+        List<String> permissions = user.getRoles()
+                .stream()
+                .flatMap(role -> role.getPermissions().stream())
+                .map(Permission::getCode)
+                .distinct()
+                .sorted(Comparator.naturalOrder())
+                .toList();
+
         return UserResponse.builder()
                 .publicId(user.getPublicId())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
-                .role(user.getRole())
+                .roles(roles)
+                .permissions(permissions)
                 .avatarUrl(user.getAvatarUrl())
                 .status(user.getStatus())
                 .createdAt(user.getCreatedAt())

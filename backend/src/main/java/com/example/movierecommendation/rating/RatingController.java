@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+import static com.example.movierecommendation.rbac.PermissionCode.RATING_READ_ADMIN;
+import static com.example.movierecommendation.rbac.PermissionCode.RATING_WRITE;
+
 @RestController
 @RequestMapping("/api/ratings")
 @RequiredArgsConstructor
@@ -19,7 +22,7 @@ public class RatingController {
 
     private final RatingService ratingService;
 
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PreAuthorize("hasAuthority('" + RATING_WRITE + "')")
     @PostMapping
     public RatingResponse rateMovie(
             Authentication authentication,
@@ -32,7 +35,7 @@ public class RatingController {
     /**
      * Admin API: xem rating theo user.
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('" + RATING_READ_ADMIN + "')")
     @GetMapping("/user/{userId}")
     public List<RatingResponse> getRatingsByUser(@PathVariable UUID userId) {
         return ratingService.getRatingsByUser(userId);

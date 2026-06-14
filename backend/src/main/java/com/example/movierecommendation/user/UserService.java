@@ -5,6 +5,7 @@ import com.example.movierecommendation.user.dto.UserStatusUpdateRequest;
 import com.example.movierecommendation.user.dto.UserUpdateRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,6 +22,7 @@ public class UserService {
 
     private final UserRepository userRepository;
 
+    @Transactional(readOnly = true)
     public List<UserResponse> getAllUsers() {
         return userRepository.findAll()
                 .stream()
@@ -28,11 +30,13 @@ public class UserService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public UserResponse getUserByPublicId(UUID publicId) {
-        User user = getUserEntityByPublicId(publicId);
+        User user = getUserEntityWithRolesByPublicId(publicId);
         return UserResponse.from(user);
     }
 
+    @Transactional(readOnly = true)
     public List<UserResponse> searchUsers(String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return getAllUsers();
@@ -50,6 +54,7 @@ public class UserService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<UserResponse> getUsersByStatus(String status) {
         validateStatus(status);
 
@@ -59,17 +64,19 @@ public class UserService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<UserResponse> getUsersByRole(String role) {
         if (role == null || role.isBlank()) {
             throw new RuntimeException("Role is required");
         }
 
-        return userRepository.findByRole(role.trim().toUpperCase())
+        return userRepository.findDistinctByRoles_Name(role.trim().toUpperCase())
                 .stream()
                 .map(UserResponse::from)
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<UserResponse> getRecentlyActiveUsers(int days) {
         int safeDays = days <= 0 ? 7 : Math.min(days, 90);
 
@@ -82,6 +89,7 @@ public class UserService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<User> getRecentlyActiveUserEntities(int days) {
         int safeDays = days <= 0 ? 7 : Math.min(days, 90);
 
@@ -93,6 +101,7 @@ public class UserService {
         );
     }
 
+    @Transactional
     public UserResponse updateUserProfile(UUID publicId, UserUpdateRequest request) {
         User user = getUserEntityByPublicId(publicId);
 
@@ -103,9 +112,13 @@ public class UserService {
         user.setFullName(request.getFullName().trim());
         user.setAvatarUrl(request.getAvatarUrl());
 
-        return UserResponse.from(userRepository.save(user));
+        userRepository.save(user);
+
+        User userWithRoles = getUserEntityWithRolesByPublicId(publicId);
+        return UserResponse.from(userWithRoles);
     }
 
+    @Transactional
     public UserResponse updateUserStatus(UUID publicId, UserStatusUpdateRequest request) {
         User user = getUserEntityByPublicId(publicId);
 
@@ -114,21 +127,36 @@ public class UserService {
         String status = request.getStatus().trim().toUpperCase();
         user.setStatus(status);
 
-        return UserResponse.from(userRepository.save(user));
+        userRepository.save(user);
+
+        User userWithRoles = getUserEntityWithRolesByPublicId(publicId);
+        return UserResponse.from(userWithRoles);
     }
 
+    @Transactional
     public void deleteUser(UUID publicId) {
         User user = getUserEntityByPublicId(publicId);
         user.setStatus(STATUS_DELETED);
         userRepository.save(user);
     }
 
+    @Transactional(readOnly = true)
     public User getUserEntityByPublicId(UUID publicId) {
         if (publicId == null) {
             throw new RuntimeException("User public ID is required");
         }
 
         return userRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    @Transactional(readOnly = true)
+    public User getUserEntityWithRolesByPublicId(UUID publicId) {
+        if (publicId == null) {
+            throw new RuntimeException("User public ID is required");
+        }
+
+        return userRepository.findWithRolesByPublicId(publicId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
