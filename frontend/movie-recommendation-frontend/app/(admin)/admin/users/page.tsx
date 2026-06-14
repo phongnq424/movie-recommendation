@@ -42,6 +42,34 @@ export default function UsersPage() {
   const [keyword, setKeyword] = useState('');
   const [debouncedKeyword, setDebouncedKeyword] = useState('');
 
+  const [currentRoles, setCurrentRoles] = useState<string[]>([]);
+  const [currentPermissions, setCurrentPermissions] = useState<string[]>([]);
+
+  useEffect(() => {
+    const userInfoStr = localStorage.getItem('user_info');
+
+    if (!userInfoStr) {
+      return;
+    }
+
+    try {
+      const userInfo = JSON.parse(userInfoStr);
+      setCurrentRoles(userInfo.roles ?? []);
+      setCurrentPermissions(userInfo.permissions ?? []);
+    } catch {
+      setCurrentRoles([]);
+      setCurrentPermissions([]);
+    }
+  }, []);
+
+  const hasPermission = (permission: string) => {
+    return currentRoles.includes('ADMIN') || currentPermissions.includes(permission);
+  };
+
+  const canChangeUserStatus = hasPermission('USER_CHANGE_STATUS');
+  const canDeleteUser = hasPermission('USER_DELETE');
+  const canShowActions = canChangeUserStatus || canDeleteUser;
+
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedKeyword(keyword), 500);
     return () => clearTimeout(timer);
@@ -104,7 +132,7 @@ export default function UsersPage() {
           <TableBody>
             {(users as UserItem[]).map((user) => {
               const roles = user.roles ?? [];
-              const isAdmin = roles.includes('ADMIN');
+              const isTargetAdmin = roles.includes('ADMIN');
 
               return (
                 <TableRow
@@ -153,64 +181,72 @@ export default function UsersPage() {
 
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      {!isAdmin && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              const newStatus =
-                                user.status === 'ACTIVE'
-                                  ? 'INACTIVE'
-                                  : 'ACTIVE';
-
-                              if (
-                                confirm(
-                                  `Bạn có chắc muốn ${newStatus === 'ACTIVE'
-                                    ? 'mở khóa'
-                                    : 'khóa'
-                                  } người dùng này?`
-                                )
-                              ) {
-                                statusMutation.mutate({
-                                  publicId: user.publicId,
-                                  status: newStatus,
-                                });
-                              }
-                            }}
-                            className="hover:bg-white/10"
-                          >
-                            {user.status === 'ACTIVE' ? (
-                              <Lock className="h-4 w-4" />
-                            ) : (
-                              <Unlock className="h-4 w-4" />
-                            )}
-                          </Button>
-
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              if (
-                                confirm(
-                                  'Bạn có chắc chắn muốn xóa người dùng này vĩnh viễn?'
-                                )
-                              ) {
-                                deleteMutation.mutate(user.publicId);
-                              }
-                            }}
-                            className="text-red-500 hover:bg-red-500/10 hover:text-red-500"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
-
-                      {isAdmin && (
+                      {isTargetAdmin ? (
                         <div className="flex items-center gap-1 text-zinc-500 text-sm italic pr-2">
                           <ShieldAlert className="h-4 w-4" />
                           Bảo vệ
                         </div>
+                      ) : canShowActions ? (
+                        <>
+                          {canChangeUserStatus && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              disabled={statusMutation.isPending}
+                              onClick={() => {
+                                const newStatus =
+                                  user.status === 'ACTIVE'
+                                    ? 'INACTIVE'
+                                    : 'ACTIVE';
+
+                                if (
+                                  confirm(
+                                    `Bạn có chắc muốn ${newStatus === 'ACTIVE'
+                                      ? 'mở khóa'
+                                      : 'khóa'
+                                    } người dùng này?`
+                                  )
+                                ) {
+                                  statusMutation.mutate({
+                                    publicId: user.publicId,
+                                    status: newStatus,
+                                  });
+                                }
+                              }}
+                              className="hover:bg-white/10 disabled:opacity-50"
+                            >
+                              {user.status === 'ACTIVE' ? (
+                                <Lock className="h-4 w-4" />
+                              ) : (
+                                <Unlock className="h-4 w-4" />
+                              )}
+                            </Button>
+                          )}
+
+                          {canDeleteUser && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              disabled={deleteMutation.isPending}
+                              onClick={() => {
+                                if (
+                                  confirm(
+                                    'Bạn có chắc chắn muốn xóa người dùng này vĩnh viễn?'
+                                  )
+                                ) {
+                                  deleteMutation.mutate(user.publicId);
+                                }
+                              }}
+                              className="text-red-500 hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-sm text-zinc-500 italic">
+                          Không có quyền
+                        </span>
                       )}
                     </div>
                   </TableCell>

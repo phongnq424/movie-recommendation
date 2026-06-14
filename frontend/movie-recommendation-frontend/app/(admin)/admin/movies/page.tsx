@@ -34,6 +34,46 @@ export default function MoviesPage() {
   const [page, setPage] = useState(0);
   const pageSize = 10;
 
+  const [currentRoles, setCurrentRoles] = useState<string[]>([]);
+  const [currentPermissions, setCurrentPermissions] = useState<string[]>([]);
+
+  useEffect(() => {
+    const userInfoStr = localStorage.getItem('user_info');
+
+    if (!userInfoStr) {
+      return;
+    }
+
+    try {
+      const userInfo = JSON.parse(userInfoStr);
+      setCurrentRoles(userInfo.roles ?? []);
+      setCurrentPermissions(userInfo.permissions ?? []);
+    } catch {
+      setCurrentRoles([]);
+      setCurrentPermissions([]);
+    }
+  }, []);
+
+  const hasPermission = (permission: string) => {
+    return currentRoles.includes('ADMIN') || currentPermissions.includes(permission);
+  };
+
+  const hasAnyPermission = (permissions: string[]) => {
+    return currentRoles.includes('ADMIN') || permissions.some((permission) => currentPermissions.includes(permission));
+  };
+
+  const canCreateMovie = hasPermission('MOVIE_CREATE');
+  const canUpdateMovie = hasPermission('MOVIE_UPDATE');
+  const canDeleteMovie = hasPermission('MOVIE_DELETE');
+  const canChangeMovieStatus = hasPermission('MOVIE_CHANGE_STATUS');
+  const canManageReviews = hasAnyPermission(['REVIEW_READ_ADMIN', 'REVIEW_MODERATE']);
+
+  const canShowActions =
+    canUpdateMovie ||
+    canDeleteMovie ||
+    canChangeMovieStatus ||
+    canManageReviews;
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedKeyword(keyword.trim());
@@ -100,12 +140,14 @@ export default function MoviesPage() {
             className="w-full border-white/10 bg-white/5 sm:w-64"
           />
 
-          <Link href="/admin/movies/create">
-            <Button className="whitespace-nowrap bg-red-600 hover:bg-red-700">
-              <Plus className="mr-2 h-4 w-4" />
-              Thêm Phim Mới
-            </Button>
-          </Link>
+          {canCreateMovie && (
+            <Link href="/admin/movies/create">
+              <Button className="whitespace-nowrap bg-red-600 hover:bg-red-700">
+                <Plus className="mr-2 h-4 w-4" />
+                Thêm Phim Mới
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -182,69 +224,83 @@ export default function MoviesPage() {
                 </TableCell>
 
                 <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Link href={`/admin/movies/${movie.publicId}/reviews`}>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-purple-400 hover:bg-white/10"
-                        title="Quản lý đánh giá"
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                      </Button>
-                    </Link>
-
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      disabled={statusMutation.isPending}
-                      onClick={() => {
-                        const newStatus =
-                          movie.status === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED';
-
-                        statusMutation.mutate({
-                          publicId: movie.publicId,
-                          status: newStatus,
-                        });
-                      }}
-                      className="hover:bg-white/10"
-                      title={
-                        movie.status === 'PUBLISHED'
-                          ? 'Ẩn phim'
-                          : 'Xuất bản phim'
-                      }
-                    >
-                      {movie.status === 'PUBLISHED' ? (
-                        <EyeOff className="h-4 w-4 text-yellow-500" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-green-500" />
+                  {canShowActions ? (
+                    <div className="flex justify-end gap-2">
+                      {canManageReviews && (
+                        <Link href={`/admin/movies/${movie.publicId}/reviews`}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-purple-400 hover:bg-white/10"
+                            title="Quản lý đánh giá"
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                          </Button>
+                        </Link>
                       )}
-                    </Button>
 
-                    <Link href={`/admin/movies/${movie.publicId}/edit`}>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-blue-400 hover:bg-white/10"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </Link>
+                      {canChangeMovieStatus && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled={statusMutation.isPending}
+                          onClick={() => {
+                            const newStatus =
+                              movie.status === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED';
 
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      disabled={deleteMutation.isPending}
-                      onClick={() => {
-                        if (confirm('Bạn có chắc chắn muốn xóa phim này?')) {
-                          deleteMutation.mutate(movie.publicId);
-                        }
-                      }}
-                      className="text-red-500 hover:bg-red-500/10 hover:text-red-500"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                            statusMutation.mutate({
+                              publicId: movie.publicId,
+                              status: newStatus,
+                            });
+                          }}
+                          className="hover:bg-white/10 disabled:opacity-50"
+                          title={
+                            movie.status === 'PUBLISHED'
+                              ? 'Ẩn phim'
+                              : 'Xuất bản phim'
+                          }
+                        >
+                          {movie.status === 'PUBLISHED' ? (
+                            <EyeOff className="h-4 w-4 text-yellow-500" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-green-500" />
+                          )}
+                        </Button>
+                      )}
+
+                      {canUpdateMovie && (
+                        <Link href={`/admin/movies/${movie.publicId}/edit`}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-blue-400 hover:bg-white/10"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      )}
+
+                      {canDeleteMovie && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled={deleteMutation.isPending}
+                          onClick={() => {
+                            if (confirm('Bạn có chắc chắn muốn xóa phim này?')) {
+                              deleteMutation.mutate(movie.publicId);
+                            }
+                          }}
+                          className="text-red-500 hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-sm text-zinc-500 italic">
+                      Không có quyền
+                    </span>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
