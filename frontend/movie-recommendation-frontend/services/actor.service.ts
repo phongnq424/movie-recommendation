@@ -30,4 +30,9 @@ export const actorService = {
         const response = await axiosClient.get<Actor[]>("/actors/active");
         return response.data;
     },
+    async getFeaturedActors(): Promise<Actor[]> {
+        const response = await axiosClient.get<Actor[]>("/actors/featured");
+        return response.data;
+    },
 };
+
