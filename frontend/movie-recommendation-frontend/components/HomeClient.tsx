@@ -192,7 +192,7 @@ export default function HomeClient() {
 
                   {/* Content Layout */}
                   <div className="relative z-10 mx-auto flex h-full max-w-[1460px] flex-col justify-center px-5 pb-10 pt-20 sm:px-8 lg:px-12">
-                    <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_0.85fr]">
+                    <div className="grid items-center gap-20 lg:grid-cols-[1.15fr_0.85fr]">
 
                       {/* Left: Info panel (Glassmorphic) */}
                       <div className="max-w-2xl rounded-3xl border border-white/10 bg-black/40 p-6 md:p-8 backdrop-blur-md animate-fadeIn shadow-2xl">
