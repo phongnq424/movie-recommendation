@@ -18,6 +18,8 @@ export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   tokenType: string;
+  roles: string[];
+  permissions: string[];
 }
 
 export interface User {

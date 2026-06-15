@@ -5,8 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Film, Users, Clapperboard, Layers, Activity, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import axiosClient from '@/services/axios';
-import AdminActivityLogs from '../_components/AdminActivityLogs';
-import SystemPerformance from '../_components/SystemPerformance';
+// import AdminActivityLogs from '../_components/AdminActivityLogs';
+// import SystemPerformance from '../_components/SystemPerformance';
 
 export default function AdminDashboardPage() {
   const { data: stats, isLoading } = useQuery({
@@ -42,34 +42,31 @@ export default function AdminDashboardPage() {
         <div className="flex bg-zinc-950/60 p-1 rounded-xl border border-white/5 self-start md:self-auto">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
-              activeTab === 'overview' 
-                ? 'bg-red-600 text-white font-bold shadow' 
-                : 'text-zinc-400 hover:text-white'
-            }`}
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${activeTab === 'overview'
+              ? 'bg-red-600 text-white font-bold shadow'
+              : 'text-zinc-400 hover:text-white'
+              }`}
           >
             Tổng quan
           </button>
-          <button
+          {/* <button
             onClick={() => setActiveTab('logs')}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
-              activeTab === 'logs' 
-                ? 'bg-red-600 text-white font-bold shadow' 
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${activeTab === 'logs'
+                ? 'bg-red-600 text-white font-bold shadow'
                 : 'text-zinc-400 hover:text-white'
-            }`}
+              }`}
           >
             Nhật ký hệ thống
           </button>
           <button
             onClick={() => setActiveTab('performance')}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
-              activeTab === 'performance' 
-                ? 'bg-red-600 text-white font-bold shadow' 
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${activeTab === 'performance'
+                ? 'bg-red-600 text-white font-bold shadow'
                 : 'text-zinc-400 hover:text-white'
-            }`}
+              }`}
           >
             Hiệu năng & Tài nguyên
-          </button>
+          </button> */}
         </div>
       </div>
 
@@ -182,7 +179,7 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {activeTab === 'logs' && (
+      {/* {activeTab === 'logs' && (
         <div className="animate-in fade-in duration-300">
           <AdminActivityLogs />
         </div>
@@ -192,7 +189,7 @@ export default function AdminDashboardPage() {
         <div className="animate-in fade-in duration-300">
           <SystemPerformance />
         </div>
-      )}
+      )} */}
     </div>
   );
 }

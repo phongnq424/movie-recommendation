@@ -57,7 +57,9 @@ export default function LoginPage() {
             localStorage.setItem('user_info', JSON.stringify({
                 userPublicId: payload.userPublicId,
                 fullName: payload.fullName,
-                email: payload.email
+                email: payload.email,
+                roles: payload.roles,
+                permissions: payload.permissions,
             }));
 
             window.dispatchEvent(new Event('auth-change'));
