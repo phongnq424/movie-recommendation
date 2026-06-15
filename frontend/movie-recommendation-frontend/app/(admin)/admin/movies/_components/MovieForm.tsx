@@ -124,8 +124,8 @@ export default function MovieForm({
   });
 
   const { data: actorsList = [] } = useQuery({
-    queryKey: ['actors', 'all'],
-    queryFn: () => actorService.getAllActors(),
+    queryKey: ['actors', 'active'],
+    queryFn: () => actorService.getAllActiveActors(),
   });
 
   const infoMutation = useMutation({
