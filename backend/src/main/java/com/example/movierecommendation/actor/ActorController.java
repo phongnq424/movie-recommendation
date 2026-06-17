@@ -3,6 +3,7 @@ package com.example.movierecommendation.actor;
 import com.example.movierecommendation.actor.dto.ActorRequest;
 import com.example.movierecommendation.actor.dto.ActorResponse;
 import com.example.movierecommendation.actor.dto.BulkActorDeleteRequest;
+import com.example.movierecommendation.common.PageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,8 +24,11 @@ public class ActorController {
 
     @PreAuthorize("hasAuthority('" + ACTOR_READ_ADMIN + "')")
     @GetMapping
-    public List<ActorResponse> getAllActors() {
-        return actorService.getAllActors();
+    public PageResponse<ActorResponse> getAllActors(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return actorService.getAllActors(page, size);
     }
 
     @GetMapping("/active")
@@ -34,8 +38,12 @@ public class ActorController {
 
     @PreAuthorize("hasAuthority('" + ACTOR_READ_ADMIN + "')")
     @GetMapping("/search")
-    public List<ActorResponse> searchActors(@RequestParam String keyword) {
-        return actorService.searchActors(keyword);
+    public PageResponse<ActorResponse> searchActors(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return actorService.searchActors(keyword, page, size);
     }
 
     @GetMapping("/featured")

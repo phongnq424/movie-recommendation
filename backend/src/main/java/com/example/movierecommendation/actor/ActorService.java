@@ -2,8 +2,13 @@ package com.example.movierecommendation.actor;
 
 import com.example.movierecommendation.actor.dto.ActorRequest;
 import com.example.movierecommendation.actor.dto.ActorResponse;
+import com.example.movierecommendation.common.PageResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,11 +24,14 @@ public class ActorService {
 
     private final ActorRepository actorRepository;
 
-    public List<ActorResponse> getAllActors() {
-        return actorRepository.findAll()
-                .stream()
-                .map(ActorResponse::from)
-                .toList();
+    public PageResponse<ActorResponse> getAllActors(int page, int size) {
+        Pageable pageable = createPageable(page, size);
+
+        Page<ActorResponse> actors = actorRepository
+                .findByStatusNot(STATUS_DELETED, pageable)
+                .map(ActorResponse::from);
+
+        return PageResponse.from(actors);
     }
 
     public List<ActorResponse> getActiveActors() {
@@ -38,11 +46,19 @@ public class ActorService {
         return ActorResponse.from(actor);
     }
 
-    public List<ActorResponse> searchActors(String keyword) {
-        return actorRepository.findByFullNameContainingIgnoreCase(keyword)
-                .stream()
-                .map(ActorResponse::from)
-                .toList();
+    public PageResponse<ActorResponse> searchActors(String keyword, int page, int size) {
+        Pageable pageable = createPageable(page, size);
+        String safeKeyword = keyword == null ? "" : keyword.trim();
+
+        Page<ActorResponse> actors = actorRepository
+                .findByFullNameContainingIgnoreCaseAndStatusNot(
+                        safeKeyword,
+                        STATUS_DELETED,
+                        pageable
+                )
+                .map(ActorResponse::from);
+
+        return PageResponse.from(actors);
     }
 
     public List<ActorResponse> getFeaturedActors() {
@@ -186,5 +202,16 @@ public class ActorService {
         }
 
         return normalizedStatus;
+    }
+
+    private Pageable createPageable(int page, int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 50);
+
+        return PageRequest.of(
+                safePage,
+                safeSize,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
     }
 }

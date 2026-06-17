@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.example</groupId>
-    <artifactId>movie-recommendation-offline-evaluation</artifactId>
+    <artifactId>movie-recommendation-content-embedding</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
@@ -13,44 +13,18 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
-        <spark.version>4.0.1</spark.version>
-        <scala.binary.version>2.13</scala.binary.version>
-
         <djl.version>0.36.0</djl.version>
-        <exec.mainClass>com.example.recommendation.evaluation.OfflineEvaluationApplication</exec.mainClass>
+        <onnxruntime.version>1.21.1</onnxruntime.version>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>com.example</groupId>
-            <artifactId>recommendation-core</artifactId>
-            <version>1.0.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-core_${scala.binary.version}</artifactId>
-            <version>${spark.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-sql_${scala.binary.version}</artifactId>
-            <version>${spark.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-mllib_${scala.binary.version}</artifactId>
-            <version>${spark.version}</version>
-        </dependency>
-
         <dependency>
             <groupId>ai.djl</groupId>
             <artifactId>api</artifactId>
             <version>${djl.version}</version>
         </dependency>
+
+        
 
         <dependency>
             <groupId>ai.djl.huggingface</groupId>
@@ -62,12 +36,32 @@
             <groupId>ai.djl.onnxruntime</groupId>
             <artifactId>onnxruntime-engine</artifactId>
             <version>${djl.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.microsoft.onnxruntime</groupId>
+            <artifactId>onnxruntime</artifactId>
+            <version>${onnxruntime.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.7</version>
         </dependency>
 
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <version>2.0.16</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>recommendation-core</artifactId>
+            <version>1.0.0</version>
         </dependency>
     </dependencies>
 
@@ -84,8 +78,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.3.0</version>
                 <configuration>
-                    <mainClass>${exec.mainClass}</mainClass>
-                    <cleanupDaemonThreads>false</cleanupDaemonThreads>
+                    <mainClass>com.example.recommendation.contentembedding.ContentEmbeddingApplication</mainClass>
                 </configuration>
             </plugin>
         </plugins>

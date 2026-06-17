@@ -1,6 +1,5 @@
 package com.example.recommendation.core.model;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -20,6 +19,7 @@ public class ScoringContext {
     private final Map<Long, Double> genreIdfScores;
     private final Map<Long, Double> actorIdfScores;
     private final Map<Long, Double> collaborativeScores;
+    private final Map<Long, Double> semanticContentScores;
     private final Map<Long, Double> sentimentScores;
 
     private ScoringContext(Builder builder) {
@@ -36,6 +36,7 @@ public class ScoringContext {
         this.genreIdfScores = safeMap(builder.genreIdfScores);
         this.actorIdfScores = safeMap(builder.actorIdfScores);
         this.collaborativeScores = safeMap(builder.collaborativeScores);
+        this.semanticContentScores = safeMap(builder.semanticContentScores);
         this.sentimentScores = safeMap(builder.sentimentScores);
     }
 
@@ -95,6 +96,18 @@ public class ScoringContext {
         return collaborativeScores;
     }
 
+    /**
+     * Semantic content score produced from content embeddings.
+     *
+     * This is intentionally not a new top-level score beside contentScore.
+     * In HybridScoreCalculator it replaces the structured genre/actor content score
+     * when a semantic score is available for the candidate movie. Genre/actor remains
+     * a fallback for movies without content embeddings.
+     */
+    public Map<Long, Double> getSemanticContentScores() {
+        return semanticContentScores;
+    }
+
     public Map<Long, Double> getSentimentScores() {
         return sentimentScores;
     }
@@ -117,6 +130,7 @@ public class ScoringContext {
         private Map<Long, Double> genreIdfScores;
         private Map<Long, Double> actorIdfScores;
         private Map<Long, Double> collaborativeScores;
+        private Map<Long, Double> semanticContentScores;
         private Map<Long, Double> sentimentScores;
 
         public Builder userRatingCount(int userRatingCount) {
@@ -181,6 +195,11 @@ public class ScoringContext {
 
         public Builder collaborativeScores(Map<Long, Double> collaborativeScores) {
             this.collaborativeScores = collaborativeScores;
+            return this;
+        }
+
+        public Builder semanticContentScores(Map<Long, Double> semanticContentScores) {
+            this.semanticContentScores = semanticContentScores;
             return this;
         }
 

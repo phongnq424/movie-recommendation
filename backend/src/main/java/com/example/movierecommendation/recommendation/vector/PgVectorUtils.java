@@ -1,4 +1,4 @@
-package com.example.movierecommendation.recommendation.ml;
+package com.example.movierecommendation.recommendation.vector;
 
 public final class PgVectorUtils {
 

@@ -1,10 +1,10 @@
-package com.example.movierecommendation.recommendation.ml;
+package com.example.movierecommendation.recommendation.retrieval.als;
 
 import com.example.movierecommendation.movie.Movie;
 import com.example.movierecommendation.movie.MovieRepository;
 import com.example.movierecommendation.rating.Rating;
 import com.example.movierecommendation.rating.RatingRepository;
-import com.example.movierecommendation.recommendation.CandidateGenerationService;
+import com.example.movierecommendation.recommendation.retrieval.rule.RuleBasedCandidateRetrievalService;
 import com.example.movierecommendation.recommendation.dto.RecommendationCandidate;
 import com.example.movierecommendation.user.User;
 import lombok.RequiredArgsConstructor;
@@ -15,10 +15,10 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class LearnedCandidateRetrievalService {
+public class AlsCandidateRetrievalService {
 
     private final LearnedEmbeddingRepository learnedEmbeddingRepository;
-    private final CandidateGenerationService candidateGenerationService;
+    private final RuleBasedCandidateRetrievalService ruleBasedCandidateRetrievalService;
     private final MovieRepository movieRepository;
     private final RatingRepository ratingRepository;
 
@@ -27,7 +27,7 @@ public class LearnedCandidateRetrievalService {
 
         if (activeModelVersion == null || activeModelVersion.isBlank()) {
             return wrapFallbackCandidates(
-                    candidateGenerationService.generateCandidates(user, candidateLimit),
+                    ruleBasedCandidateRetrievalService.generateCandidates(user, candidateLimit),
                     "FALLBACK_RULE_CANDIDATE"
             );
         }
@@ -39,7 +39,7 @@ public class LearnedCandidateRetrievalService {
 
         if (userEmbedding == null || userEmbedding.isBlank()) {
             return wrapFallbackCandidates(
-                    candidateGenerationService.generateCandidates(user, candidateLimit),
+                    ruleBasedCandidateRetrievalService.generateCandidates(user, candidateLimit),
                     "FALLBACK_RULE_CANDIDATE"
             );
         }
@@ -67,7 +67,7 @@ public class LearnedCandidateRetrievalService {
 
     public List<RecommendationCandidate> retrieveForAnonymous(int candidateLimit) {
         return wrapFallbackCandidates(
-                candidateGenerationService.generateAnonymousCandidates(candidateLimit),
+                ruleBasedCandidateRetrievalService.generateAnonymousCandidates(candidateLimit),
                 "ANONYMOUS_FALLBACK"
         );
     }
@@ -129,6 +129,7 @@ public class LearnedCandidateRetrievalService {
             candidates.add(RecommendationCandidate.builder()
                     .movie(movie)
                     .retrievalScore(retrievalScore)
+                    .collaborativeScore(retrievalScore)
                     .source("ALS_RETRIEVAL")
                     .build());
         }
@@ -174,7 +175,7 @@ public class LearnedCandidateRetrievalService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        List<Movie> fallbackMovies = candidateGenerationService.generateCandidates(user, candidateLimit);
+        List<Movie> fallbackMovies = ruleBasedCandidateRetrievalService.generateCandidates(user, candidateLimit);
 
         for (Movie movie : fallbackMovies) {
             if (movie == null || movie.getId() == null) {

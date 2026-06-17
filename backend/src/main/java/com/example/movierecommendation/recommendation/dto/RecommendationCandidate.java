@@ -10,5 +10,7 @@ public class RecommendationCandidate {
 
     private Movie movie;
     private double retrievalScore;
+    private Double collaborativeScore;
+    private Double semanticContentScore;
     private String source;
 }

@@ -3,7 +3,7 @@ package com.example.movierecommendation.recommendation.impression;
 import com.example.movierecommendation.movie.Movie;
 import com.example.movierecommendation.movie.MovieRepository;
 import com.example.movierecommendation.recommendation.dto.RecommendationResponse;
-import com.example.movierecommendation.recommendation.ml.LearnedEmbeddingRepository;
+import com.example.movierecommendation.recommendation.retrieval.als.LearnedEmbeddingRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

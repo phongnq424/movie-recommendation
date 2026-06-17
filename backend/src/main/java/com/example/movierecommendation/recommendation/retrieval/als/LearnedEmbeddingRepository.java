@@ -1,4 +1,4 @@
-package com.example.movierecommendation.recommendation.ml;
+package com.example.movierecommendation.recommendation.retrieval.als;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;

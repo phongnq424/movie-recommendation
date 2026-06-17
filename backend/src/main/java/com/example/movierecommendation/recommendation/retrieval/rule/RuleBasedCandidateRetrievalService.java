@@ -1,4 +1,4 @@
-package com.example.movierecommendation.recommendation;
+package com.example.movierecommendation.recommendation.retrieval.rule;
 
 import com.example.movierecommendation.movie.Movie;
 import com.example.movierecommendation.movie.MovieRepository;
@@ -7,7 +7,8 @@ import com.example.movierecommendation.movieactor.MovieActorRepository;
 import com.example.movierecommendation.moviegenre.MovieGenreRepository;
 import com.example.movierecommendation.rating.Rating;
 import com.example.movierecommendation.rating.RatingRepository;
-import com.example.movierecommendation.recommendation.dto.UserMovieInterestProfile;
+import com.example.movierecommendation.recommendation.profile.UserMovieInterestProfile;
+import com.example.movierecommendation.recommendation.profile.UserMovieInterestService;
 import com.example.movierecommendation.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -18,15 +19,12 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class CandidateGenerationService {
+public class RuleBasedCandidateRetrievalService {
 
     private static final String STATUS_PUBLISHED = "PUBLISHED";
-    private static final double LIKED_RATING_THRESHOLD = 4.0;
-    private static final double MIN_SIMILARITY = 0.30;
 
     private static final int GENRE_CANDIDATE_LIMIT = 80;
     private static final int ACTOR_CANDIDATE_LIMIT = 50;
-    private static final int COLLABORATIVE_CANDIDATE_LIMIT = 80;
     private static final int POPULAR_CANDIDATE_LIMIT = 50;
     private static final int FRESH_CANDIDATE_LIMIT = 40;
 
@@ -37,7 +35,6 @@ public class CandidateGenerationService {
     private final RatingRepository ratingRepository;
     private final MovieGenreRepository movieGenreRepository;
     private final MovieActorRepository movieActorRepository;
-    private final UserSimilarityCalculator userSimilarityCalculator;
     private final UserMovieInterestService userMovieInterestService;
 
     public List<Movie> generateCandidates(User user, int candidateLimit) {
@@ -171,82 +168,6 @@ public class CandidateGenerationService {
         addMovies(candidateMap, movies);
     }
 
-    private void addCollaborativeCandidates(
-            User user,
-            List<Rating> userRatings,
-            Map<Long, Movie> candidateMap
-    ) {
-        Map<Long, Double> currentUserRatingMap = new HashMap<>();
-
-        for (Rating rating : userRatings) {
-            if (rating == null) {
-                continue;
-            }
-
-            if (rating.getMovie() == null) {
-                continue;
-            }
-
-            if (rating.getMovie().getId() == null) {
-                continue;
-            }
-
-            if (rating.getRatingValue() == null) {
-                continue;
-            }
-
-            currentUserRatingMap.merge(
-                    rating.getMovie().getId(),
-                    rating.getRatingValue(),
-                    Math::max
-            );
-        }
-
-        if (currentUserRatingMap.isEmpty()) {
-            return;
-        }
-
-        List<Rating> otherRatings = ratingRepository.findOtherUsersRatings(user.getId());
-
-        Map<Long, List<Rating>> ratingsByOtherUser = otherRatings.stream()
-                .filter(Objects::nonNull)
-                .filter(rating -> rating.getUser() != null)
-                .filter(rating -> rating.getUser().getId() != null)
-                .collect(Collectors.groupingBy(rating -> rating.getUser().getId()));
-
-        Map<Long, Double> similarityByUser = new HashMap<>();
-
-        for (Map.Entry<Long, List<Rating>> entry : ratingsByOtherUser.entrySet()) {
-            double similarity = userSimilarityCalculator.calculate(currentUserRatingMap, entry.getValue());
-
-            if (similarity >= MIN_SIMILARITY) {
-                similarityByUser.put(entry.getKey(), similarity);
-            }
-        }
-
-        if (similarityByUser.isEmpty()) {
-            return;
-        }
-
-        List<Movie> collaborativeMovies = otherRatings.stream()
-                .filter(Objects::nonNull)
-                .filter(rating -> rating.getUser() != null)
-                .filter(rating -> rating.getUser().getId() != null)
-                .filter(rating -> similarityByUser.containsKey(rating.getUser().getId()))
-                .filter(rating -> safeDouble(rating.getRatingValue()) >= LIKED_RATING_THRESHOLD)
-                .map(Rating::getMovie)
-                .filter(Objects::nonNull)
-                .filter(movie -> STATUS_PUBLISHED.equals(movie.getStatus()))
-                .sorted(Comparator
-                        .comparing(Movie::getAverageRating, Comparator.nullsLast(Double::compareTo))
-                        .reversed()
-                )
-                .limit(COLLABORATIVE_CANDIDATE_LIMIT)
-                .toList();
-
-        addMovies(candidateMap, collaborativeMovies);
-    }
-
     private boolean isImportantActor(MovieActor movieActor) {
         if (Boolean.TRUE.equals(movieActor.getMainCast())) {
             return true;
@@ -269,9 +190,5 @@ public class CandidateGenerationService {
 
             candidateMap.putIfAbsent(movie.getId(), movie);
         }
-    }
-
-    private double safeDouble(Double value) {
-        return value == null ? 0.0 : value;
     }
 }

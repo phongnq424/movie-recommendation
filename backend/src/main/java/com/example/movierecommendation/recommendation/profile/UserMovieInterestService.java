@@ -1,9 +1,8 @@
-package com.example.movierecommendation.recommendation;
+package com.example.movierecommendation.recommendation.profile;
 
 import com.example.movierecommendation.interaction.UserMovieInteraction;
 import com.example.movierecommendation.interaction.UserMovieInteractionRepository;
 import com.example.movierecommendation.rating.Rating;
-import com.example.movierecommendation.recommendation.dto.UserMovieInterestProfile;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

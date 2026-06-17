@@ -1,4 +1,4 @@
-package com.example.movierecommendation.recommendation.dto;
+package com.example.movierecommendation.recommendation.profile;
 
 import lombok.Builder;
 import lombok.Getter;

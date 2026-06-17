@@ -8,6 +8,7 @@ import com.example.movierecommendation.movieactor.dto.MovieActorResponse;
 import com.example.movierecommendation.moviegenre.MovieGenreRepository;
 import com.example.movierecommendation.moviegenre.dto.MovieGenreResponse;
 import com.example.movierecommendation.common.PageResponse;
+import com.example.movierecommendation.recommendation.embedding.MovieContentEmbeddingJobService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -33,6 +34,7 @@ public class MovieService {
     private final MovieRepository movieRepository;
     private final MovieActorRepository movieActorRepository;
     private final MovieGenreRepository movieGenreRepository;
+    private final MovieContentEmbeddingJobService contentEmbeddingJobService;
 
     public PageResponse<MovieResponse> getAllMovies(int page, int size) {
         Pageable pageable = createPageable(page, size);
@@ -169,8 +171,16 @@ public class MovieService {
                 })
                 .toList();
 
-        return movieRepository.saveAll(movies)
-                .stream()
+        List<Movie> savedMovies = movieRepository.saveAll(movies);
+
+        savedMovies.forEach(movie ->
+                contentEmbeddingJobService.requestRebuildAfterCommit(
+                        movie,
+                        "MOVIE_CREATED"
+                )
+        );
+
+        return savedMovies.stream()
                 .map(MovieResponse::from)
                 .toList();
     }
@@ -208,14 +218,28 @@ public class MovieService {
             movie.setStatus(normalizeStatus(request.getStatus()));
         }
 
-        return MovieResponse.from(movieRepository.save(movie));
+        Movie savedMovie = movieRepository.save(movie);
+
+        contentEmbeddingJobService.requestRebuildAfterCommit(
+                savedMovie,
+                "MOVIE_UPDATED"
+        );
+
+        return MovieResponse.from(savedMovie);
     }
 
     public MovieResponse updateMovieStatus(UUID publicId, String status) {
         Movie movie = getMovieEntityByPublicId(publicId);
         movie.setStatus(normalizeStatus(status));
 
-        return MovieResponse.from(movieRepository.save(movie));
+        Movie savedMovie = movieRepository.save(movie);
+
+        contentEmbeddingJobService.requestRebuildAfterCommit(
+                savedMovie,
+                "MOVIE_STATUS_CHANGED"
+        );
+
+        return MovieResponse.from(savedMovie);
     }
 
     public MovieResponse deleteMovie(UUID publicId) {

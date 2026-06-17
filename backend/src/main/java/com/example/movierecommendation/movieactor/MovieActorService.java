@@ -7,6 +7,7 @@ import com.example.movierecommendation.movie.MovieRepository;
 import com.example.movierecommendation.movieactor.dto.MovieActorItemRequest;
 import com.example.movierecommendation.movieactor.dto.MovieActorRequest;
 import com.example.movierecommendation.movieactor.dto.MovieActorResponse;
+import com.example.movierecommendation.recommendation.embedding.MovieContentEmbeddingJobService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,7 @@ public class MovieActorService {
     private final MovieActorRepository movieActorRepository;
     private final MovieRepository movieRepository;
     private final ActorRepository actorRepository;
+    private final MovieContentEmbeddingJobService contentEmbeddingJobService;
 
     @Transactional
     public MovieActorResponse addActorToMovie(MovieActorRequest request) {
@@ -49,7 +51,14 @@ public class MovieActorService {
                 .mainCast(request.getMainCast() != null ? request.getMainCast() : false)
                 .build();
 
-        return MovieActorResponse.from(movieActorRepository.save(movieActor));
+        MovieActor savedMovieActor = movieActorRepository.save(movieActor);
+
+        contentEmbeddingJobService.requestRebuildAfterCommit(
+                movie,
+                "MOVIE_CAST_CHANGED"
+        );
+
+        return MovieActorResponse.from(savedMovieActor);
     }
 
     @Transactional(readOnly = true)
@@ -100,6 +109,11 @@ public class MovieActorService {
                 .orElseThrow(() -> new RuntimeException("Movie actor not found"));
 
         movieActorRepository.delete(movieActor);
+
+        contentEmbeddingJobService.requestRebuildAfterCommit(
+                movie,
+                "MOVIE_CAST_CHANGED"
+        );
     }
 
     /**

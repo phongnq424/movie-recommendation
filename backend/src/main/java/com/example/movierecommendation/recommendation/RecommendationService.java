@@ -5,7 +5,8 @@ import com.example.movierecommendation.recommendation.config.RecommendationPrope
 import com.example.movierecommendation.recommendation.dto.RecommendationCandidate;
 import com.example.movierecommendation.recommendation.dto.RecommendationResponse;
 import com.example.movierecommendation.recommendation.impression.RecommendationImpressionService;
-import com.example.movierecommendation.recommendation.ml.LearnedCandidateRetrievalService;
+import com.example.movierecommendation.recommendation.ranking.RecommendationRankingService;
+import com.example.movierecommendation.recommendation.retrieval.CandidateRetrievalOrchestrator;
 import com.example.movierecommendation.recommendation.rerank.RecommendationReRankingService;
 import com.example.movierecommendation.recommendation.scheduler.RecommendationRefreshRequestedEvent;
 import com.example.movierecommendation.recommendation.snapshot.RecommendationSnapshotService;
@@ -29,7 +30,7 @@ public class RecommendationService {
     private static final String PUBLIC_SNAPSHOT_KEY = "PUBLIC";
 
     private final UserRepository userRepository;
-    private final LearnedCandidateRetrievalService learnedCandidateRetrievalService;
+    private final CandidateRetrievalOrchestrator candidateRetrievalService;
     private final RecommendationRankingService rankingService;
     private final RecommendationReRankingService reRankingService;
     private final RecommendationImpressionService impressionService;
@@ -129,7 +130,7 @@ public class RecommendationService {
             User user = userRepository.findByPublicId(userPublicId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            List<RecommendationCandidate> candidates = learnedCandidateRetrievalService.retrieveForUser(
+            List<RecommendationCandidate> candidates = candidateRetrievalService.retrieveForUser(
                     user,
                     USER_CANDIDATE_LIMIT
             );
@@ -179,7 +180,7 @@ public class RecommendationService {
         int safeLimit = properties.safeLimit(limit);
 
         try {
-            List<RecommendationCandidate> candidates = learnedCandidateRetrievalService.retrieveForAnonymous(
+            List<RecommendationCandidate> candidates = candidateRetrievalService.retrieveForAnonymous(
                     ANONYMOUS_CANDIDATE_LIMIT
             );
 

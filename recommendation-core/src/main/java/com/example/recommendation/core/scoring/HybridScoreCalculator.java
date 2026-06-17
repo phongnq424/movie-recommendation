@@ -58,6 +58,13 @@ public class HybridScoreCalculator {
     }
 
     private double calculateContentScore(ScoringMovie movie, ScoringContext context) {
+        double semanticContentScore = context.getSemanticContentScores()
+                .getOrDefault(movie.getMovieId(), -1.0);
+
+        if (semanticContentScore >= 0.0) {
+            return clamp(semanticContentScore);
+        }
+
         double genreScore = calculateGenreScore(movie, context);
         double actorScore = calculateActorScore(movie, context);
 

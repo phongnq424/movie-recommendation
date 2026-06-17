@@ -6,6 +6,7 @@ import com.example.movierecommendation.movie.Movie;
 import com.example.movierecommendation.movie.MovieRepository;
 import com.example.movierecommendation.moviegenre.dto.MovieGenreRequest;
 import com.example.movierecommendation.moviegenre.dto.MovieGenreResponse;
+import com.example.movierecommendation.recommendation.embedding.MovieContentEmbeddingJobService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,7 @@ public class MovieGenreService {
     private final MovieGenreRepository movieGenreRepository;
     private final MovieRepository movieRepository;
     private final GenreRepository genreRepository;
+    private final MovieContentEmbeddingJobService contentEmbeddingJobService;
 
     @Transactional
     public MovieGenreResponse addGenreToMovie(MovieGenreRequest request) {
@@ -46,7 +48,14 @@ public class MovieGenreService {
                 .genre(genre)
                 .build();
 
-        return MovieGenreResponse.from(movieGenreRepository.save(movieGenre));
+        MovieGenre savedMovieGenre = movieGenreRepository.save(movieGenre);
+
+        contentEmbeddingJobService.requestRebuildAfterCommit(
+                movie,
+                "MOVIE_GENRES_CHANGED"
+        );
+
+        return MovieGenreResponse.from(savedMovieGenre);
     }
 
     @Transactional(readOnly = true)
@@ -77,8 +86,12 @@ public class MovieGenreService {
         MovieGenre movieGenre = movieGenreRepository
                 .findByMovieIdAndGenreId(movie.getId(), genre.getId())
                 .orElseThrow(() -> new RuntimeException("Genre does not exist in this movie"));
-
         movieGenreRepository.delete(movieGenre);
+
+        contentEmbeddingJobService.requestRebuildAfterCommit(
+                movie,
+                "MOVIE_GENRES_CHANGED"
+        );
     }
 
     @Transactional
@@ -127,8 +140,12 @@ public class MovieGenreService {
 
         if (!movieGenresToCreate.isEmpty()) {
             movieGenreRepository.saveAll(movieGenresToCreate);
-        }
+        };
 
+        contentEmbeddingJobService.requestRebuildAfterCommit(
+                movie,
+                "MOVIE_GENRES_CHANGED"
+        );
         return movieGenreRepository.findByMovieId(movie.getId())
                 .stream()
                 .map(MovieGenreResponse::from)

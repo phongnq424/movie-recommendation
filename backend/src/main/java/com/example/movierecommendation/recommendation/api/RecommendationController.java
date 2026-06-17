@@ -1,5 +1,6 @@
-package com.example.movierecommendation.recommendation;
+package com.example.movierecommendation.recommendation.api;
 
+import com.example.movierecommendation.recommendation.RecommendationService;
 import com.example.movierecommendation.recommendation.dto.RecommendationResponse;
 import com.example.movierecommendation.recommendation.scheduler.RecommendationPrecomputeService;
 import lombok.RequiredArgsConstructor;

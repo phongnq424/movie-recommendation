@@ -1,4 +1,4 @@
-package com.example.movierecommendation.recommendation;
+package com.example.movierecommendation.recommendation.ranking;
 
 import com.example.recommendation.core.model.RecommendationItem;
 import com.example.recommendation.core.model.ScoreBreakdown;
@@ -23,7 +23,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class RecommendationRankingService {
 
-    private final RecommendationScoreCalculator scoreCalculator;
+    private final RecommendationScoreContextCalculator scoreCalculator;
 
     private final RecommendationRanker coreRanker = new RecommendationRanker();
     private final RecommendationWeightResolver coreWeightResolver = new RecommendationWeightResolver();
@@ -35,9 +35,14 @@ public class RecommendationRankingService {
     ) {
         List<Movie> movies = extractMovies(candidates);
 
+        Map<Long, Double> collaborativeScores = extractCollaborativeScores(candidates);
+        Map<Long, Double> semanticContentScores = extractSemanticContentScores(candidates);
+
         ScoringContext context = scoreCalculator.buildContext(
                 user,
-                movies
+                movies,
+                collaborativeScores,
+                semanticContentScores
         );
 
         RecommendationWeights weights = coreWeightResolver.resolve(context);
@@ -66,6 +71,56 @@ public class RecommendationRankingService {
                 .filter(candidate -> candidate != null && candidate.getMovie() != null)
                 .map(RecommendationCandidate::getMovie)
                 .toList();
+    }
+
+    private Map<Long, Double> extractCollaborativeScores(List<RecommendationCandidate> candidates) {
+        if (candidates == null || candidates.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Long, Double> scores = new LinkedHashMap<>();
+
+        for (RecommendationCandidate candidate : candidates) {
+            if (candidate == null
+                    || candidate.getMovie() == null
+                    || candidate.getMovie().getId() == null
+                    || candidate.getCollaborativeScore() == null) {
+                continue;
+            }
+
+            scores.merge(
+                    candidate.getMovie().getId(),
+                    candidate.getCollaborativeScore(),
+                    Math::max
+            );
+        }
+
+        return scores;
+    }
+
+    private Map<Long, Double> extractSemanticContentScores(List<RecommendationCandidate> candidates) {
+        if (candidates == null || candidates.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Long, Double> scores = new LinkedHashMap<>();
+
+        for (RecommendationCandidate candidate : candidates) {
+            if (candidate == null
+                    || candidate.getMovie() == null
+                    || candidate.getMovie().getId() == null
+                    || candidate.getSemanticContentScore() == null) {
+                continue;
+            }
+
+            scores.merge(
+                    candidate.getMovie().getId(),
+                    candidate.getSemanticContentScore(),
+                    Math::max
+            );
+        }
+
+        return scores;
     }
 
     private List<RecommendationResponse> rankAndMapResponses(
