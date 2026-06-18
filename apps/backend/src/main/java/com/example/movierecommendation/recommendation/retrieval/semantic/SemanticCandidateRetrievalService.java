@@ -32,18 +32,17 @@ public class SemanticCandidateRetrievalService {
         }
 
         try {
-            String userContentEmbedding = semanticUserContentVectorService.buildUserContentEmbeddingText(user.getId());
+            List<SemanticProfileMovie> profileMovies =
+                    semanticUserContentVectorService.buildUserProfileMovies(user.getId());
 
-            if (userContentEmbedding == null || userContentEmbedding.isBlank()) {
+            if (profileMovies.isEmpty()) {
                 return List.of();
             }
 
             List<Long> excludedMovieIds = loadExcludedMovieIds(user);
-            List<SemanticMovieRetrievalResult> retrievalResults = movieContentEmbeddingRepository.findNearestPublishedMovies(
-                    userContentEmbedding,
-                    excludedMovieIds,
-                    candidateLimit
-            );
+
+            List<SemanticMovieRetrievalResult> retrievalResults =
+                    retrieveMultiInterestCandidates(profileMovies, excludedMovieIds, candidateLimit);
 
             return mapRetrievalResultsToCandidates(retrievalResults);
         } catch (Exception ex) {
@@ -61,6 +60,101 @@ public class SemanticCandidateRetrievalService {
                 .filter(rating -> rating.getMovie().getId() != null)
                 .map(rating -> rating.getMovie().getId())
                 .distinct()
+                .toList();
+    }
+    private List<SemanticMovieRetrievalResult> retrieveMultiInterestCandidates(
+            List<SemanticProfileMovie> profileMovies,
+            List<Long> excludedMovieIds,
+            int candidateLimit
+    ) {
+        if (profileMovies == null || profileMovies.isEmpty() || candidateLimit <= 0) {
+            return List.of();
+        }
+
+        List<Long> anchorMovieIds = profileMovies.stream()
+                .map(SemanticProfileMovie::movieId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        if (anchorMovieIds.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, String> embeddingByMovieId =
+                movieContentEmbeddingRepository.findEmbeddingTextsByMovieIds(anchorMovieIds);
+
+        if (embeddingByMovieId == null || embeddingByMovieId.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> safeExcludedMovieIds = new ArrayList<>();
+
+        if (excludedMovieIds != null) {
+            safeExcludedMovieIds.addAll(excludedMovieIds);
+        }
+
+        safeExcludedMovieIds.addAll(anchorMovieIds);
+
+        safeExcludedMovieIds = safeExcludedMovieIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        int perAnchorLimit = Math.max(
+                5,
+                (int) Math.ceil(candidateLimit / (double) Math.max(1, profileMovies.size()))
+        );
+
+        perAnchorLimit = Math.min(candidateLimit, perAnchorLimit * 3);
+
+        Map<Long, Double> bestScoreByMovieId = new java.util.LinkedHashMap<>();
+
+        for (SemanticProfileMovie profileMovie : profileMovies) {
+            if (profileMovie == null || profileMovie.movieId() == null) {
+                continue;
+            }
+
+            String anchorEmbedding = embeddingByMovieId.get(profileMovie.movieId());
+
+            if (anchorEmbedding == null || anchorEmbedding.isBlank()) {
+                continue;
+            }
+
+            List<SemanticMovieRetrievalResult> nearestMovies =
+                    movieContentEmbeddingRepository.findNearestPublishedMovies(
+                            anchorEmbedding,
+                            safeExcludedMovieIds,
+                            perAnchorLimit
+                    );
+
+            for (SemanticMovieRetrievalResult result : nearestMovies) {
+                if (result == null || result.movieId() == null) {
+                    continue;
+                }
+
+                double similarity = result.semanticContentScore() == null
+                        ? 0.0
+                        : result.semanticContentScore();
+
+                double weightedScore = clamp(similarity * profileMovie.weight());
+
+                bestScoreByMovieId.merge(
+                        result.movieId(),
+                        weightedScore,
+                        Math::max
+                );
+            }
+        }
+
+        return bestScoreByMovieId.entrySet()
+                .stream()
+                .sorted(Map.Entry.<Long, Double>comparingByValue().reversed())
+                .limit(candidateLimit)
+                .map(entry -> new SemanticMovieRetrievalResult(
+                        entry.getKey(),
+                        entry.getValue()
+                ))
                 .toList();
     }
 
@@ -118,5 +212,8 @@ public class SemanticCandidateRetrievalService {
         }
 
         return candidates;
+    }
+    private double clamp(double value) {
+        return Math.max(0.0, Math.min(1.0, value));
     }
 }
