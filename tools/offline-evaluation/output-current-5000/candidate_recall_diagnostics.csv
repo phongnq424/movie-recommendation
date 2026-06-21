@@ -1,0 +1,11 @@
+metric,value
+evaluated_users,5000
+als_candidate_recall_at_pool,0.493943
+semantic_candidate_recall_at_pool,0.059668
+hybrid_semantic_candidate_recall_at_pool,0.527250
+als_hit_rate_at_pool,0.919200
+semantic_hit_rate_at_pool,0.389200
+hybrid_semantic_hit_rate_at_pool,0.937800
+avg_als_candidates,200.000000
+avg_semantic_candidates,199.880000
+avg_hybrid_semantic_candidates,211.853600
