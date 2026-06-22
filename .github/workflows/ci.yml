@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+  push:
+    branches:
+      - main
+
+jobs:
+  backend-test:
+    name: Backend JUnit Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: movie_recommendation_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d movie_recommendation_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      rabbitmq:
+        image: rabbitmq:3-management
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 10s
+          --health-timeout 10s
+          --health-retries 10
+
+    env:
+      DB_URL: jdbc:postgresql://localhost:5432/movie_recommendation_test
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+
+      JWT_SECRET: 0123456789012345678901234567890123456789012345678901234567890123
+      JWT_ACCESS_EXPIRATION_MS: 3600000
+      JWT_REFRESH_EXPIRATION_MS: 604800000
+
+      REDIS_URL: redis://localhost:6379
+      RECOMMENDATION_CACHE_ENABLED: false
+      RECOMMENDATION_SCHEDULER_ENABLED: false
+
+      SPRING_RABBITMQ_ADDRESSES: localhost:5672
+      NLP_BASE_URL: http://localhost:8001
+
+      DDL_AUTO: create-drop
+      FLYWAY_BASELINE_ON_MIGRATE: false
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+
+      - name: Build recommendation-core
+        working-directory: services/recommendation-core
+        run: mvn -B clean install
+
+      - name: Run backend JUnit tests
+        working-directory: apps/backend
+        run: mvn -B clean test
+
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+
+    env:
+      NEXT_PUBLIC_API_BASE_URL: https://movie-recommendation-sdx5.onrender.com/api
+      NEXT_PUBLIC_API_URL: https://movie-recommendation-sdx5.onrender.com
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/frontend/movie-recommendation-frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: apps/frontend/movie-recommendation-frontend
+        run: npm ci
+
+      - name: Run frontend lint
+        working-directory: apps/frontend/movie-recommendation-frontend
+        run: npm run lint
+
+      - name: Build frontend
+        working-directory: apps/frontend/movie-recommendation-frontend
+        run: npm run build
