@@ -3,7 +3,7 @@ package com.example.movierecommendation.recommendation.rerank;
 import com.example.recommendation.core.model.RecommendationItem;
 import com.example.recommendation.core.model.ScoreBreakdown;
 import com.example.recommendation.core.model.ScoringMovie;
-import com.example.recommendation.core.rerank.GenreDiversityReRanker;
+import com.example.recommendation.core.rerank.ReRankStrategy;
 import com.example.movierecommendation.moviegenre.MovieGenreRepository;
 import com.example.movierecommendation.recommendation.dto.RecommendationResponse;
 import com.example.movierecommendation.recommendation.dto.RecommendationScoreBreakdown;
@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 public class RecommendationReRankingService {
 
     private final MovieGenreRepository movieGenreRepository;
-    private final GenreDiversityReRanker coreReRanker = new GenreDiversityReRanker();
+    private final ReRankStrategy coreReRanker;
 
     public List<RecommendationResponse> reRank(List<RecommendationResponse> rankedResults, int limit) {
         if (rankedResults == null || rankedResults.isEmpty()) {

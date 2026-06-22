@@ -25,8 +25,8 @@ public class RecommendationRankingService {
 
     private final RecommendationScoreContextCalculator scoreCalculator;
 
-    private final RecommendationRanker coreRanker = new RecommendationRanker();
-    private final RecommendationWeightResolver coreWeightResolver = new RecommendationWeightResolver();
+    private final RecommendationRanker coreRanker;
+    private final RecommendationWeightResolver coreWeightResolver;
 
     public List<RecommendationResponse> rankForUser(
             com.example.movierecommendation.user.User user,

@@ -2,6 +2,8 @@ package com.example.recommendation.core.rerank;
 
 import com.example.recommendation.core.model.RecommendationItem;
 
+import com.example.recommendation.core.rerank.ReRankStrategy;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -10,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class GenreDiversityReRanker {
+public class GenreDiversityReRanker implements ReRankStrategy {
 
     public static final int DEFAULT_MAX_SAME_PRIMARY_GENRE_IN_TOP = 3;
 
@@ -24,11 +26,11 @@ public class GenreDiversityReRanker {
         this.maxSamePrimaryGenreInTop = maxSamePrimaryGenreInTop;
     }
 
+    @Override
     public List<RecommendationItem> reRank(
             List<RecommendationItem> rankedResults,
             Map<String, Long> primaryGenreByItemKey,
-            int limit
-    ) {
+            int limit) {
         if (rankedResults == null || rankedResults.isEmpty()) {
             return List.of();
         }
@@ -99,8 +101,7 @@ public class GenreDiversityReRanker {
     private void fillRemainingResults(
             List<RecommendationItem> finalList,
             List<RecommendationItem> deduplicated,
-            int limit
-    ) {
+            int limit) {
         Set<String> addedIds = new HashSet<>();
 
         for (RecommendationItem item : finalList) {

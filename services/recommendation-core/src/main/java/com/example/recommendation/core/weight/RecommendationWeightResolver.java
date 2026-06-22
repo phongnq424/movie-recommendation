@@ -4,26 +4,23 @@ import com.example.recommendation.core.model.ScoringContext;
 
 public class RecommendationWeightResolver {
 
+    private final RecommendationWeightPolicy policy;
+
+    public RecommendationWeightResolver() {
+        this(RecommendationWeightPolicy.defaults());
+    }
+
+    public RecommendationWeightResolver(RecommendationWeightPolicy policy) {
+        this.policy = policy == null
+                ? RecommendationWeightPolicy.defaults()
+                : policy;
+    }
+
     public RecommendationWeights resolve(ScoringContext context) {
-        int ratingCount = context == null ? 0 : context.getUserRatingCount();
-        int interactionCount = context == null ? 0 : context.getInteractionCount();
-
-        if (ratingCount == 0 && interactionCount == 0) {
-            return RecommendationWeights.newUser();
-        }
-
-        if (ratingCount < 3 && interactionCount < 5) {
-            return RecommendationWeights.lightUser();
-        }
-
-        if (ratingCount < 5) {
-            return RecommendationWeights.contentHeavy();
-        }
-
-        return RecommendationWeights.personalized();
+        return policy.resolve(context);
     }
 
     public RecommendationWeights anonymous() {
-        return RecommendationWeights.anonymous();
+        return policy.anonymous();
     }
 }
