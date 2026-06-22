@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import Image from "next/image";
 import Link from "next/link";
 import { User } from "lucide-react";
@@ -7,8 +10,8 @@ import { Actor } from "@/types/actor";
 
 export default async function ActorsPage() {
     let actors: Actor[] = [];
+
     try {
-        // Gọi API lấy danh sách diễn viên đang active theo yêu cầu
         actors = await actorService.getAllActiveActors();
     } catch (error) {
         console.error("Lỗi khi tải danh sách diễn viên:", error);
@@ -37,7 +40,6 @@ export default async function ActorsPage() {
                         {actors.map((actor) => (
                             <Link
                                 key={actor.publicId}
-                                // Chuyển sang trang MoviesPage kèm query params actor để lọc phim
                                 href={`/movies?actor=${actor.publicId}`}
                                 className="group flex flex-col items-center text-center"
                             >
