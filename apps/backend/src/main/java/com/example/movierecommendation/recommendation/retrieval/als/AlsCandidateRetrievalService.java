@@ -4,6 +4,8 @@ import com.example.movierecommendation.movie.Movie;
 import com.example.movierecommendation.movie.MovieRepository;
 import com.example.movierecommendation.rating.Rating;
 import com.example.movierecommendation.rating.RatingRepository;
+import com.example.movierecommendation.recommendation.retrieval.CandidateRetrievalStrategy;
+import com.example.movierecommendation.recommendation.retrieval.CandidateSource;
 import com.example.movierecommendation.recommendation.retrieval.rule.RuleBasedCandidateRetrievalService;
 import com.example.movierecommendation.recommendation.dto.RecommendationCandidate;
 import com.example.movierecommendation.user.User;
@@ -15,7 +17,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class AlsCandidateRetrievalService {
+public class AlsCandidateRetrievalService implements CandidateRetrievalStrategy {
 
     private final LearnedEmbeddingRepository learnedEmbeddingRepository;
     private final RuleBasedCandidateRetrievalService ruleBasedCandidateRetrievalService;
@@ -130,7 +132,7 @@ public class AlsCandidateRetrievalService {
                     .movie(movie)
                     .retrievalScore(retrievalScore)
                     .collaborativeScore(retrievalScore)
-                    .source("ALS_RETRIEVAL")
+                    .source(CandidateSource.ALS_RETRIEVAL)
                     .build());
         }
 
@@ -155,7 +157,7 @@ public class AlsCandidateRetrievalService {
             candidates.add(RecommendationCandidate.builder()
                     .movie(movie)
                     .retrievalScore(0.0)
-                    .source(source)
+                    .source(CandidateSource.ANONYMOUS_FALLBACK)
                     .build());
         }
 
@@ -189,7 +191,7 @@ public class AlsCandidateRetrievalService {
             candidates.add(RecommendationCandidate.builder()
                     .movie(movie)
                     .retrievalScore(0.0)
-                    .source("FALLBACK_RULE_CANDIDATE")
+                    .source(CandidateSource.FALLBACK_RULE_CANDIDATE)
                     .build());
 
             existingIds.add(movie.getId());
@@ -198,5 +200,19 @@ public class AlsCandidateRetrievalService {
                 return;
             }
         }
+    }
+    @Override
+    public CandidateSource source() {
+        return CandidateSource.ALS_RETRIEVAL;
+    }
+
+    @Override
+    public double userCandidatePortion() {
+        return 0.65;
+    }
+
+    @Override
+    public boolean supportsAnonymous() {
+        return true;
     }
 }

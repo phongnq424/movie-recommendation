@@ -2,8 +2,6 @@ package com.example.movierecommendation.recommendation.retrieval;
 
 import com.example.movierecommendation.movie.Movie;
 import com.example.movierecommendation.recommendation.dto.RecommendationCandidate;
-import com.example.movierecommendation.recommendation.retrieval.als.AlsCandidateRetrievalService;
-import com.example.movierecommendation.recommendation.retrieval.semantic.SemanticCandidateRetrievalService;
 import com.example.movierecommendation.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -11,36 +9,60 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class CandidateRetrievalOrchestrator {
 
-    private static final double ALS_PORTION = 0.65;
-    private static final double SEMANTIC_PORTION = 0.45;
-
-    private final AlsCandidateRetrievalService alsCandidateRetrievalService;
-    private final SemanticCandidateRetrievalService semanticCandidateRetrievalService;
+    private final List<CandidateRetrievalStrategy> retrievalStrategies;
 
     public List<RecommendationCandidate> retrieveForUser(User user, int candidateLimit) {
         if (candidateLimit <= 0) {
             return List.of();
         }
 
-        int alsLimit = Math.max(1, (int) Math.ceil(candidateLimit * ALS_PORTION));
-        int semanticLimit = Math.max(1, (int) Math.ceil(candidateLimit * SEMANTIC_PORTION));
+        List<RecommendationCandidate> mergedCandidates = new ArrayList<>();
 
-        List<RecommendationCandidate> merged = new ArrayList<>();
-        merged.addAll(alsCandidateRetrievalService.retrieveForUser(user, alsLimit));
-        merged.addAll(semanticCandidateRetrievalService.retrieveForUser(user, semanticLimit));
+        for (CandidateRetrievalStrategy strategy : retrievalStrategies) {
+            if (strategy == null || !strategy.supportsUser(user)) {
+                continue;
+            }
 
-        return deduplicate(merged, candidateLimit);
+            int strategyLimit = calculateStrategyLimit(
+                    candidateLimit,
+                    strategy.userCandidatePortion()
+            );
+
+            List<RecommendationCandidate> candidates =
+                    strategy.retrieveForUser(user, strategyLimit);
+
+            if (candidates != null && !candidates.isEmpty()) {
+                mergedCandidates.addAll(candidates);
+            }
+        }
+
+        return deduplicate(mergedCandidates, candidateLimit);
     }
 
     public List<RecommendationCandidate> retrieveForAnonymous(int candidateLimit) {
-        return alsCandidateRetrievalService.retrieveForAnonymous(candidateLimit);
+        if (candidateLimit <= 0) {
+            return List.of();
+        }
+
+        return retrievalStrategies.stream()
+                .filter(CandidateRetrievalStrategy::supportsAnonymous)
+                .findFirst()
+                .map(strategy -> strategy.retrieveForAnonymous(candidateLimit))
+                .orElseGet(List::of);
+    }
+
+    private int calculateStrategyLimit(int candidateLimit, double portion) {
+        double safePortion = portion <= 0 ? 1.0 : portion;
+        return Math.max(1, (int) Math.ceil(candidateLimit * safePortion));
     }
 
     private List<RecommendationCandidate> deduplicate(
@@ -83,7 +105,9 @@ public class CandidateRetrievalOrchestrator {
             RecommendationCandidate first,
             RecommendationCandidate second
     ) {
-        Movie movie = first.getMovie() != null ? first.getMovie() : second.getMovie();
+        Movie movie = first.getMovie() != null
+                ? first.getMovie()
+                : second.getMovie();
 
         double retrievalScore = Math.max(
                 first.getRetrievalScore(),
@@ -100,14 +124,16 @@ public class CandidateRetrievalOrchestrator {
                 second.getSemanticContentScore()
         );
 
-        String source = mergeSource(first.getSource(), second.getSource());
+        Set<CandidateSource> sources = new LinkedHashSet<>();
+        sources.addAll(first.getSources());
+        sources.addAll(second.getSources());
 
         return RecommendationCandidate.builder()
                 .movie(movie)
                 .retrievalScore(retrievalScore)
                 .collaborativeScore(collaborativeScore)
                 .semanticContentScore(semanticContentScore)
-                .source(source)
+                .sources(sources)
                 .build();
     }
 
@@ -140,21 +166,5 @@ public class CandidateRetrievalOrchestrator {
         }
 
         return Math.max(first, second);
-    }
-
-    private String mergeSource(String first, String second) {
-        if (first == null || first.isBlank()) {
-            return second;
-        }
-
-        if (second == null || second.isBlank()) {
-            return first;
-        }
-
-        if (first.equals(second)) {
-            return first;
-        }
-
-        return first + "+" + second;
     }
 }

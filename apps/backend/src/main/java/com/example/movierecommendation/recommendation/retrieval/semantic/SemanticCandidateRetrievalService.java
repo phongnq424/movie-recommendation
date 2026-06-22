@@ -5,6 +5,8 @@ import com.example.movierecommendation.movie.MovieRepository;
 import com.example.movierecommendation.rating.Rating;
 import com.example.movierecommendation.rating.RatingRepository;
 import com.example.movierecommendation.recommendation.dto.RecommendationCandidate;
+import com.example.movierecommendation.recommendation.retrieval.CandidateRetrievalStrategy;
+import com.example.movierecommendation.recommendation.retrieval.CandidateSource;
 import com.example.movierecommendation.user.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +21,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SemanticCandidateRetrievalService {
+public class SemanticCandidateRetrievalService implements CandidateRetrievalStrategy {
 
     private final SemanticUserContentVectorService semanticUserContentVectorService;
     private final MovieContentEmbeddingRepository movieContentEmbeddingRepository;
@@ -207,7 +209,7 @@ public class SemanticCandidateRetrievalService {
                     .movie(movie)
                     .retrievalScore(semanticScore)
                     .semanticContentScore(semanticScore)
-                    .source("CONTENT_EMBEDDING_RETRIEVAL")
+                    .source(CandidateSource.CONTENT_EMBEDDING_RETRIEVAL)
                     .build());
         }
 
@@ -215,5 +217,14 @@ public class SemanticCandidateRetrievalService {
     }
     private double clamp(double value) {
         return Math.max(0.0, Math.min(1.0, value));
+    }
+    @Override
+    public CandidateSource source() {
+        return CandidateSource.CONTENT_EMBEDDING_RETRIEVAL;
+    }
+
+    @Override
+    public double userCandidatePortion() {
+        return 0.45;
     }
 }
