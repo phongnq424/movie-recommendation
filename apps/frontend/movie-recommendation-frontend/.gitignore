@@ -59,6 +59,5 @@ coverage/
 
 # lock (tùy team, thường giữ lại 1 cái)
 
-package-lock.json
 yarn.lock
 pnpm-lock.yaml
