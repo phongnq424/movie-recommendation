@@ -17,7 +17,6 @@ import static com.example.movierecommendation.rbac.PermissionCode.*;
 @RestController
 @RequestMapping("/api/actors")
 @RequiredArgsConstructor
-@CrossOrigin("*")
 public class ActorController {
 
     private final ActorService actorService;

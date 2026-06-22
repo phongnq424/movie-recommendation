@@ -17,7 +17,6 @@ import static com.example.movierecommendation.rbac.PermissionCode.RATING_WRITE;
 @RestController
 @RequestMapping("/api/ratings")
 @RequiredArgsConstructor
-@CrossOrigin("*")
 public class RatingController {
 
     private final RatingService ratingService;
