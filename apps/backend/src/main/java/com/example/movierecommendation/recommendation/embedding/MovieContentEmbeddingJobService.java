@@ -6,8 +6,7 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +17,7 @@ public class MovieContentEmbeddingJobService {
     @PersistenceContext
     private EntityManager entityManager;
 
+    @Transactional
     public void requestRebuildAfterCommit(Movie movie, String reason) {
         if (movie == null || movie.getId() == null) {
             return;
@@ -27,23 +27,10 @@ public class MovieContentEmbeddingJobService {
             return;
         }
 
-        Long movieId = movie.getId();
-
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(
-                    new TransactionSynchronization() {
-                        @Override
-                        public void afterCommit() {
-                            requestRebuild(movieId, reason);
-                        }
-                    }
-            );
-            return;
-        }
-
-        requestRebuild(movieId, reason);
+        requestRebuild(movie.getId(), reason);
     }
 
+    @Transactional
     public void requestRebuild(Long movieId, String reason) {
         if (movieId == null) {
             return;
