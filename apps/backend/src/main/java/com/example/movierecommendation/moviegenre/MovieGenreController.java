@@ -17,7 +17,6 @@ import static com.example.movierecommendation.rbac.PermissionCode.MOVIE_GENRE_MA
 @RestController
 @RequestMapping("/api/movie-genres")
 @RequiredArgsConstructor
-@CrossOrigin("*")
 public class MovieGenreController {
 
     private final MovieGenreService movieGenreService;

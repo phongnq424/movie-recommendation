@@ -17,7 +17,6 @@ import static com.example.movierecommendation.rbac.PermissionCode.INTERACTION_RE
 @RestController
 @RequestMapping("/api/interactions")
 @RequiredArgsConstructor
-@CrossOrigin("*")
 public class UserMovieInteractionController {
 
     private final UserMovieInteractionService interactionService;
