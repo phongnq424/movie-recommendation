@@ -12,6 +12,13 @@ import ai.djl.repository.zoo.ModelZoo;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.training.util.ProgressBar;
 import ai.djl.translate.TranslateException;
+import main.java.com.example.movierecommendation.recommendation.embedding.MovieContentEmbeddingMessage;
+
+import com.google.gson.Gson;
+import com.rabbitmq.client.BuiltinExchangeType;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.DeliverCallback;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -33,21 +40,30 @@ import java.util.Optional;
 import java.util.Properties;
 
 /**
- * Java-only transformer content embedding job.
+ * Java-only transformer content embedding worker.
  *
  * Supported modes:
- * 1. Batch scan mode:
+ * 1. RabbitMQ mode:
+ * - consume movie content changed messages from RabbitMQ
+ * - fetch movie text from DB
+ * - compare content_hash
+ * - embed changed movies
+ * - upsert movie_content_embeddings
+ *
+ * 2. Batch scan mode:
  * - scan all PUBLISHED movies
  * - compare content_hash
  * - embed changed movies
  *
- * 2. Job mode:
- * - read movie_content_embedding_jobs
+ * 3. Legacy job mode:
+ * - read movie_content_embedding_jobs directly
  * - claim PENDING jobs
  * - embed only affected movies
  * - mark jobs DONE / FAILED
  */
 public class ContentEmbeddingApplication {
+
+    private static final Gson GSON = new Gson();
 
     public static void main(String[] args) throws Exception {
         ContentEmbeddingConfig config = ContentEmbeddingConfig.load(args);
@@ -55,20 +71,176 @@ public class ContentEmbeddingApplication {
 
         MovieTextRepository repository = new MovieTextRepository(config);
 
-        System.out.println("Starting semantic content embedding job.");
-        System.out.println("Model name: " + config.modelName());
-        System.out.println("Model url : " + config.modelUrl());
-        System.out.println("Model path: " + config.modelPath());
-        System.out.println("Batch size: " + config.batchSize());
-        System.out.println("Job mode  : " + config.jobMode());
+        System.out.println("Starting semantic content embedding worker.");
+        System.out.println("Model name : " + config.modelName());
+        System.out.println("Model url  : " + config.modelUrl());
+        System.out.println("Model path : " + config.modelPath());
+        System.out.println("Batch size : " + config.batchSize());
+        System.out.println("Job mode   : " + config.jobMode());
+        System.out.println("Rabbit mode: " + config.rabbitMode());
 
         try (SentenceEmbeddingModel embeddingModel = new DjlSentenceEmbeddingModel(config)) {
-            if (config.jobMode()) {
+            if (config.rabbitMode()) {
+                runRabbitConsumerMode(config, repository, embeddingModel);
+            } else if (config.jobMode()) {
                 runJobMode(config, repository, embeddingModel);
             } else {
                 runBatchScanMode(config, repository, embeddingModel);
             }
         }
+    }
+
+    private static void runRabbitConsumerMode(
+            ContentEmbeddingConfig config,
+            MovieTextRepository repository,
+            SentenceEmbeddingModel embeddingModel) throws Exception {
+        if (config.rabbitmqUrl() == null || config.rabbitmqUrl().isBlank()) {
+            throw new IllegalStateException("RABBITMQ_URL is required when CONTENT_EMBEDDING_RABBIT_MODE=true");
+        }
+
+        ConnectionFactory factory = new ConnectionFactory();
+        factory.setUri(config.rabbitmqUrl());
+        factory.setAutomaticRecoveryEnabled(true);
+        factory.setNetworkRecoveryInterval(5000);
+
+        com.rabbitmq.client.Connection connection = factory.newConnection();
+        Channel channel = connection.createChannel();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                if (channel.isOpen()) {
+                    channel.close();
+                }
+            } catch (Exception ignored) {
+            }
+
+            try {
+                if (connection.isOpen()) {
+                    connection.close();
+                }
+            } catch (Exception ignored) {
+            }
+        }));
+
+        channel.exchangeDeclare(
+                config.rabbitExchange(),
+                BuiltinExchangeType.DIRECT,
+                true);
+
+        channel.queueDeclare(
+                config.rabbitQueue(),
+                true,
+                false,
+                false,
+                null);
+
+        channel.queueBind(
+                config.rabbitQueue(),
+                config.rabbitExchange(),
+                config.rabbitRoutingKey());
+
+        channel.basicQos(config.rabbitPrefetch());
+
+        System.out.println("RabbitMQ content embedding consumer started.");
+        System.out.println("Exchange: " + config.rabbitExchange());
+        System.out.println("Queue   : " + config.rabbitQueue());
+        System.out.println("Routing : " + config.rabbitRoutingKey());
+        System.out.println("Prefetch: " + config.rabbitPrefetch());
+
+        DeliverCallback deliverCallback = (consumerTag, delivery) -> {
+            long deliveryTag = delivery.getEnvelope().getDeliveryTag();
+
+            try {
+                String payload = new String(delivery.getBody(), StandardCharsets.UTF_8);
+
+                MovieContentEmbeddingMessage message = GSON.fromJson(payload, MovieContentEmbeddingMessage.class);
+
+                if (message == null || message.movieId() == null) {
+                    System.out.println("Invalid RabbitMQ message. payload=" + payload);
+                    channel.basicAck(deliveryTag, false);
+                    return;
+                }
+
+                MovieContentEmbeddingResult result = processSingleMovieMessage(
+                        config,
+                        repository,
+                        embeddingModel,
+                        message);
+
+                System.out.println("Processed content embedding message. movieId="
+                        + message.movieId()
+                        + ", reason=" + message.reason()
+                        + ", embedded=" + result.embedded()
+                        + ", skipped=" + result.skipped()
+                        + ", message=" + result.message()
+                        + ", time=" + LocalDateTime.now());
+
+                channel.basicAck(deliveryTag, false);
+            } catch (Exception exception) {
+                System.out.println("Failed to process RabbitMQ content embedding message. error="
+                        + exception.getMessage()
+                        + ", time=" + LocalDateTime.now());
+
+                channel.basicNack(
+                        deliveryTag,
+                        false,
+                        config.rabbitRequeueOnFailure());
+            }
+        };
+
+        channel.basicConsume(
+                config.rabbitQueue(),
+                false,
+                deliverCallback,
+                consumerTag -> {
+                });
+
+        Thread.currentThread().join();
+    }
+
+    private static MovieContentEmbeddingResult processSingleMovieMessage(
+            ContentEmbeddingConfig config,
+            MovieTextRepository repository,
+            SentenceEmbeddingModel embeddingModel,
+            MovieContentEmbeddingMessage message) throws SQLException, TranslateException {
+        Optional<MovieTextItem> optionalItem = repository.fetchMovieTextByMovieId(message.movieId());
+
+        if (optionalItem.isEmpty()) {
+            return new MovieContentEmbeddingResult(
+                    false,
+                    true,
+                    "Movie not found or not published");
+        }
+
+        MovieTextItem item = optionalItem.get();
+
+        if (item.text().isBlank()) {
+            return new MovieContentEmbeddingResult(
+                    false,
+                    true,
+                    "Movie semantic text is blank");
+        }
+
+        if (!config.force() && item.contentHash().equals(item.existingContentHash())) {
+            return new MovieContentEmbeddingResult(
+                    false,
+                    true,
+                    "Content hash unchanged");
+        }
+
+        List<float[]> vectors = embeddingModel.embed(List.of(item.text()));
+
+        if (vectors.size() != 1) {
+            throw new IllegalStateException(
+                    "Embedding output size mismatch. Expected 1, got " + vectors.size());
+        }
+
+        repository.upsertEmbeddings(List.of(item), vectors);
+
+        return new MovieContentEmbeddingResult(
+                true,
+                false,
+                "Embedding upserted");
     }
 
     private static void runBatchScanMode(
@@ -253,9 +425,17 @@ public class ContentEmbeddingApplication {
             String poolingMode,
             boolean jobMode,
             int jobMaxAttempts,
-            int jobRetryDelaySeconds) {
+            int jobRetryDelaySeconds,
+            boolean rabbitMode,
+            String rabbitmqUrl,
+            String rabbitExchange,
+            String rabbitQueue,
+            String rabbitRoutingKey,
+            int rabbitPrefetch,
+            boolean rabbitRequeueOnFailure) {
+
         private static ContentEmbeddingConfig load(String[] args) throws IOException {
-            Properties env = loadDotEnv();
+            Properties env = loadEnvironment();
             Properties cli = parseArgs(args);
 
             return new ContentEmbeddingConfig(
@@ -278,33 +458,46 @@ public class ContentEmbeddingApplication {
                     get(env, cli, "CONTENT_EMBEDDING_POOLING_MODE", "mean"),
                     Boolean.parseBoolean(get(env, cli, "CONTENT_EMBEDDING_JOB_MODE", "false")),
                     Integer.parseInt(get(env, cli, "CONTENT_EMBEDDING_JOB_MAX_ATTEMPTS", "3")),
-                    Integer.parseInt(get(env, cli, "CONTENT_EMBEDDING_JOB_RETRY_DELAY_SECONDS", "300")));
+                    Integer.parseInt(get(env, cli, "CONTENT_EMBEDDING_JOB_RETRY_DELAY_SECONDS", "300")),
+                    Boolean.parseBoolean(get(env, cli, "CONTENT_EMBEDDING_RABBIT_MODE", "false")),
+                    blankToNull(get(env, cli, "RABBITMQ_URL", null)),
+                    get(env, cli, "CONTENT_EMBEDDING_RABBIT_EXCHANGE", "movie.events"),
+                    get(env, cli, "CONTENT_EMBEDDING_RABBIT_QUEUE", "movie.content.embedding"),
+                    get(env, cli, "CONTENT_EMBEDDING_RABBIT_ROUTING_KEY", "movie.content.changed"),
+                    Integer.parseInt(get(env, cli, "CONTENT_EMBEDDING_RABBIT_PREFETCH", "1")),
+                    Boolean.parseBoolean(get(env, cli, "CONTENT_EMBEDDING_RABBIT_REQUEUE_ON_FAILURE", "true")));
         }
 
-        private static Properties loadDotEnv() throws IOException {
+        private static Properties loadEnvironment() throws IOException {
             Properties properties = new Properties();
+
+            System.getenv().forEach(properties::setProperty);
+
             Path path = Path.of(".env");
 
             if (!Files.exists(path)) {
-                throw new IllegalStateException(
-                        ".env file not found in content-embedding root. Copy .env.example to .env first.");
+                return properties;
             }
 
             try (BufferedReader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
                 String line;
+
                 while ((line = reader.readLine()) != null) {
                     String trimmed = line.trim();
+
                     if (trimmed.isBlank() || trimmed.startsWith("#")) {
                         continue;
                     }
 
                     int equalIndex = trimmed.indexOf('=');
+
                     if (equalIndex <= 0) {
                         continue;
                     }
 
                     String key = trimmed.substring(0, equalIndex).trim();
                     String value = trimmed.substring(equalIndex + 1).trim();
+
                     properties.setProperty(key, removeWrappingQuotes(value));
                 }
             }
@@ -375,10 +568,12 @@ public class ContentEmbeddingApplication {
             if (value == null || value.length() < 2) {
                 return value;
             }
+
             if ((value.startsWith("\"") && value.endsWith("\""))
                     || (value.startsWith("'") && value.endsWith("'"))) {
                 return value.substring(1, value.length() - 1);
             }
+
             return value;
         }
     }
@@ -427,20 +622,25 @@ public class ContentEmbeddingApplication {
             if (config.modelPath() != null) {
                 return HuggingFaceTokenizer.newInstance(Path.of(config.modelPath()));
             }
+
             return HuggingFaceTokenizer.newInstance(config.tokenizer());
         }
 
         @Override
         public List<float[]> embed(List<String> texts) throws TranslateException {
             List<float[]> result = new ArrayList<>(texts.size());
+
             for (String text : texts) {
                 float[] vector = predictor.predict(text);
+
                 if (vector.length != config.dimension()) {
                     throw new IllegalStateException("Unexpected embedding dimension: "
                             + vector.length + ". Expected: " + config.dimension());
                 }
+
                 result.add(VectorUtils.normalize(vector));
             }
+
             return result;
         }
 
@@ -477,9 +677,11 @@ public class ContentEmbeddingApplication {
                     statement.setInt(index++, config.actorLimit());
                     statement.setLong(index++, afterId);
                     statement.setString(index++, config.status());
+
                     if (config.movieId() != null) {
                         statement.setLong(index++, config.movieId());
                     }
+
                     statement.setInt(index, config.batchSize());
 
                     return mapMovieTextItems(statement);
@@ -504,6 +706,7 @@ public class ContentEmbeddingApplication {
                     statement.setString(index, config.status());
 
                     List<MovieTextItem> items = mapMovieTextItems(statement);
+
                     if (items.isEmpty()) {
                         return Optional.empty();
                     }
@@ -554,6 +757,7 @@ public class ContentEmbeddingApplication {
 
                 while (rs.next()) {
                     long movieId = rs.getLong("id");
+
                     String text = MovieSemanticTextBuilder.build(
                             rs.getString("title"),
                             rs.getString("original_title"),
@@ -561,6 +765,7 @@ public class ContentEmbeddingApplication {
                             rs.getObject("release_year") == null ? null : rs.getInt("release_year"),
                             rs.getString("genres"),
                             rs.getString("actors"));
+
                     String hash = HashUtils.sha256(text);
 
                     result.add(new MovieTextItem(
@@ -610,6 +815,7 @@ public class ContentEmbeddingApplication {
                     }
 
                     connection.commit();
+
                     return jobs;
                 } catch (Exception exception) {
                     connection.rollback();
@@ -714,6 +920,17 @@ public class ContentEmbeddingApplication {
         }
     }
 
+    private record MovieContentEmbeddingMessage(
+            Long movieId,
+            String reason) {
+    }
+
+    private record MovieContentEmbeddingResult(
+            boolean embedded,
+            boolean skipped,
+            String message) {
+    }
+
     private record EmbeddingJobItem(
             long id,
             long movieId) {
@@ -729,46 +946,6 @@ public class ContentEmbeddingApplication {
             String text,
             String contentHash,
             String existingContentHash) {
-    }
-
-    private static final class MovieTextBuilder {
-        private MovieTextBuilder() {
-        }
-
-        private static String build(
-                String title,
-                String originalTitle,
-                String description,
-                Integer releaseYear,
-                String genres,
-                String actors) {
-            StringBuilder builder = new StringBuilder();
-
-            appendLine(builder, "Title", title);
-            appendLine(builder, "Original title", originalTitle);
-            if (releaseYear != null) {
-                appendLine(builder, "Release year", String.valueOf(releaseYear));
-            }
-            appendLine(builder, "Genres", genres);
-            appendLine(builder, "Main cast", actors);
-            appendLine(builder, "Description", description);
-
-            return normalizeWhitespace(builder.toString());
-        }
-
-        private static void appendLine(StringBuilder builder, String label, String value) {
-            if (value == null || value.isBlank()) {
-                return;
-            }
-            builder.append(label).append(": ").append(value.trim()).append('.').append('\n');
-        }
-
-        private static String normalizeWhitespace(String value) {
-            if (value == null) {
-                return "";
-            }
-            return value.replaceAll("\\s+", " ").trim();
-        }
     }
 
     private static final class VectorUtils {
