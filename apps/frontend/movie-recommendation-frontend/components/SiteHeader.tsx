@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation"; // Thêm usePathname
+import { useRouter, usePathname } from "next/navigation";
 import {
     Bell,
     ChevronDown,
@@ -12,6 +12,7 @@ import {
     Search,
     Settings,
     User,
+    ShieldCheck,
 } from "lucide-react";
 import { authService } from "@/services/auth.service";
 
@@ -22,13 +23,21 @@ const navItems = [
     { label: "Diễn viên", href: "/actors" },
 ];
 
+// Cập nhật kiểu dữ liệu định nghĩa cho user để nhận diện mảng roles từ localStorage
+interface UserInfo {
+    fullName: string;
+    roles: string[];
+    userPublicId: string;
+    email: string;
+}
+
 export function SiteHeader() {
-    const [user, setUser] = useState<{ fullName: string; role: string; userPublicId: string } | null>(null);
+    const [user, setUser] = useState<UserInfo | null>(null);
     const [showDropdown, setShowDropdown] = useState(false);
     const [genres, setGenres] = useState<{ publicId: string; name: string; slug: string }[]>([]);
 
     const router = useRouter();
-    const pathname = usePathname(); // Lấy đường dẫn hiện tại
+    const pathname = usePathname();
 
     useEffect(() => {
         const checkAuth = () => {
@@ -64,6 +73,9 @@ export function SiteHeader() {
         }
     };
 
+    // Kiểm tra xem user hiện tại có role là ADMIN hay không
+    const isAdmin = user?.roles?.includes("ADMIN");
+
     return (
         <header className="fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-black/90 backdrop-blur-md transition-all">
             <div className="mx-auto flex h-20 max-w-[1460px] items-center justify-between px-5 sm:px-8 lg:px-12">
@@ -81,7 +93,6 @@ export function SiteHeader() {
 
                     <nav className="hidden items-center gap-6 lg:flex">
                         {navItems.map((item) => {
-                            // Kiểm tra xem item có đang active hay không
                             const isActive = pathname === item.href || (item.label === "Thể loại" && pathname.startsWith('/movies?genre='));
 
                             if (item.label === "Thể loại") {
@@ -129,7 +140,6 @@ export function SiteHeader() {
                                                 }`}
                                         />
                                     )}
-
                                 </Link>
                             );
                         })}
@@ -169,9 +179,22 @@ export function SiteHeader() {
 
                             {showDropdown && (
                                 <div className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-white/10 bg-[#111114] shadow-xl shadow-black/50">
+
+                                    {/* HIỂN THỊ NÚT ADMIN NẾU CÓ ROLE ADMIN */}
+                                    {isAdmin && (
+                                        <Link
+                                            href="/admin"
+                                            onClick={() => setShowDropdown(false)}
+                                            className="flex items-center gap-2 border-b border-white/5 px-4 py-3 text-sm font-medium text-amber-400 transition-colors hover:bg-white/10 hover:text-amber-300"
+                                        >
+                                            <ShieldCheck size={16} /> Trang quản trị
+                                        </Link>
+                                    )}
+
                                     <Link href="/profile" onClick={() => setShowDropdown(false)} className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/10 hover:text-white">
                                         <Settings size={16} /> Hồ sơ cá nhân
                                     </Link>
+
                                     <button
                                         onClick={() => { setShowDropdown(false); handleLogout(); }}
                                         className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-red-400 transition-colors hover:bg-white/10 hover:text-red-300"
