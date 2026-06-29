@@ -76,5 +76,30 @@ export interface PaginationResponse<T> {
     isLast?: boolean;
 }
 
+export interface MovieVectorSearchResponse {
+    publicId: string;
+    title: string;
+    originalTitle?: string;
+    slug: string;
+    description?: string;
+    releaseYear?: number;
+    durationMinutes?: number;
+    posterUrl?: string;
+    backdropUrl?: string;
+    trailerUrl?: string;
+    movieUrl?: string;
+    quality?: string;
+    ageRating?: string;
+    averageRating?: number;
+    ratingCount?: number;
+    viewCount?: number;
+    similarity: number;
+}
+
+export interface MovieVectorSearchRequest {
+    query: string;
+    limit?: number;
+}
+
 export type MoviePaginatedResponse = PaginationResponse<Movie>;
 

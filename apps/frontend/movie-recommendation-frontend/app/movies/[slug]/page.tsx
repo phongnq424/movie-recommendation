@@ -7,6 +7,7 @@ import { MovieRating } from "@/components/MovieRating";
 import { movieService } from "@/services/movie.service";
 import { MovieReviews } from "@/components/MovieReviews";
 import { MovieTrailer } from "@/components/MovieTrailer";
+import { SimilarVectorMoviesSection } from "@/components/SimilarVectorMoviesSection";
 
 
 const fallbackBackdrop =
@@ -203,6 +204,14 @@ export default async function MovieDetailPage({
                         <MovieReviews moviePublicId={movie.publicId} />
                     </div>
                 </section>
+            )}
+
+            {movie.publicId && (
+                <SimilarVectorMoviesSection
+                    moviePublicId={movie.publicId}
+                    currentMovieTitle={movie.title}
+                    limit={12}
+                />
             )}
         </main>
     );

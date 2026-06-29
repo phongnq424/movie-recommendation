@@ -1,9 +1,17 @@
 import axiosClient from "@/services/axios";
-import type { Movie, MovieDetailResponse, MovieRequest, MoviePaginatedResponse } from "@/types/movie";
+import type {
+    Movie,
+    MovieDetailResponse,
+    MovieRequest,
+    MoviePaginatedResponse,
+    MovieVectorSearchResponse,
+    MovieVectorSearchRequest,
+} from "@/types/movie";
 import type {
     TrackInteractionRequest,
     UserMovieInteractionResponse
 } from "@/types/interaction";
+
 
 export const movieService = {
     async getAllMovies(): Promise<Movie[]> {
@@ -119,6 +127,31 @@ export const movieService = {
             `/interactions/movies/${moviePublicId}`,
             payload
         );
+
+        return response.data;
+    },
+
+    async getSimilarVectorMovies(
+        publicId: string,
+        limit: number = 20
+    ): Promise<MovieVectorSearchResponse[]> {
+        const response = await axiosClient.get(`/movies/${publicId}/similar-vector`, {
+            params: { limit },
+        });
+
+        return response.data;
+    },
+
+    async searchMoviesByVectorText(
+        query: string,
+        limit: number = 20
+    ): Promise<MovieVectorSearchResponse[]> {
+        const payload: MovieVectorSearchRequest = {
+            query,
+            limit,
+        };
+
+        const response = await axiosClient.post("/movies/vector-search", payload);
 
         return response.data;
     },
