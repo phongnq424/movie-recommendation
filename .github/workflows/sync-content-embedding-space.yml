@@ -8,7 +8,7 @@ on:
     paths:
       - "services/content-embedding/**"
       - "services/recommendation-core/**"
-      - "deploy/huggingface/content-embedding/**"
+      - "services/deploy/huggingface/content-embedding/**"
       - ".github/workflows/sync-content-embedding-space.yml"
 
 jobs:
@@ -27,8 +27,8 @@ jobs:
           rm -rf .hf-space
           mkdir -p .hf-space
 
-          cp deploy/huggingface/content-embedding/README.md .hf-space/README.md
-          cp deploy/huggingface/content-embedding/Dockerfile .hf-space/Dockerfile
+          cp services/deploy/huggingface/content-embedding/README.md .hf-space/README.md
+          cp services/deploy/huggingface/content-embedding/Dockerfile .hf-space/Dockerfile
 
           mkdir -p .hf-space/recommendation-core
           cp services/recommendation-core/pom.xml .hf-space/recommendation-core/pom.xml
