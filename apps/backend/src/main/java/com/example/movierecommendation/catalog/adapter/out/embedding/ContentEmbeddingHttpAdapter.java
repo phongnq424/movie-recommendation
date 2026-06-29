@@ -29,6 +29,9 @@ public class ContentEmbeddingHttpAdapter implements TextEmbeddingPort {
         }
 
         try {
+            System.out.println("Calling content embedding service: "
+                    + properties.getBaseUrl()
+                    + "/api/embeddings/text");
             EmbeddingResponse response = restClient.post()
                     .uri("/api/embeddings/text")
                     .body(new EmbeddingRequest(text.trim()))
