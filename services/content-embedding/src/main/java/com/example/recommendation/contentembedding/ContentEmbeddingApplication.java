@@ -12,7 +12,6 @@ import ai.djl.repository.zoo.ModelZoo;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.training.util.ProgressBar;
 import ai.djl.translate.TranslateException;
-import main.java.com.example.movierecommendation.recommendation.embedding.MovieContentEmbeddingMessage;
 
 import com.google.gson.Gson;
 import com.rabbitmq.client.BuiltinExchangeType;

@@ -13,8 +13,12 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
         <djl.version>0.36.0</djl.version>
         <onnxruntime.version>1.21.1</onnxruntime.version>
+
+        <!-- Default main class: chạy worker RabbitMQ cũ khi không truyền -Dexec.mainClass -->
+        <exec.mainClass>com.example.recommendation.contentembedding.ContentEmbeddingApplication</exec.mainClass>
     </properties>
 
     <dependencies>
@@ -23,8 +27,6 @@
             <artifactId>api</artifactId>
             <version>${djl.version}</version>
         </dependency>
-
-        
 
         <dependency>
             <groupId>ai.djl.huggingface</groupId>
@@ -53,28 +55,28 @@
         </dependency>
 
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <version>2.0.16</version>
-        </dependency>
-
-        <dependency>
             <groupId>com.example</groupId>
             <artifactId>recommendation-core</artifactId>
             <version>1.0.0</version>
         </dependency>
 
         <dependency>
-    <groupId>com.rabbitmq</groupId>
-    <artifactId>amqp-client</artifactId>
-    <version>5.22.0</version>
-</dependency>
+            <groupId>com.rabbitmq</groupId>
+            <artifactId>amqp-client</artifactId>
+            <version>5.22.0</version>
+        </dependency>
 
-<dependency>
-    <groupId>com.google.code.gson</groupId>
-    <artifactId>gson</artifactId>
-    <version>2.13.1</version>
-</dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.13.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>2.0.16</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -90,7 +92,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.3.0</version>
                 <configuration>
-                    <mainClass>com.example.recommendation.contentembedding.ContentEmbeddingApplication</mainClass>
+                    <mainClass>${exec.mainClass}</mainClass>
                 </configuration>
             </plugin>
         </plugins>
