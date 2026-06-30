@@ -47,24 +47,6 @@ export default function AdminDashboardPage() {
           >
             Tổng quan
           </button>
-          {/* <button
-            onClick={() => setActiveTab('logs')}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${activeTab === 'logs'
-                ? 'bg-red-600 text-white font-bold shadow'
-                : 'text-zinc-400 hover:text-white'
-              }`}
-          >
-            Nhật ký hệ thống
-          </button>
-          <button
-            onClick={() => setActiveTab('performance')}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${activeTab === 'performance'
-                ? 'bg-red-600 text-white font-bold shadow'
-                : 'text-zinc-400 hover:text-white'
-              }`}
-          >
-            Hiệu năng & Tài nguyên
-          </button> */}
         </div>
       </div>
 
