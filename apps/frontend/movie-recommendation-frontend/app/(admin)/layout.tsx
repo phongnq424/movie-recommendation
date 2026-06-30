@@ -25,7 +25,7 @@ async function getCurrentUser(): Promise<CurrentUser | null> {
   const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   try {
-    const response = await fetch(`${apiUrl}users/me`, {
+    const response = await fetch(`${apiUrl}/users/me`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${accessToken}`,
