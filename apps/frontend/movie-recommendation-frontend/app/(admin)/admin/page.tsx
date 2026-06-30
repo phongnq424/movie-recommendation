@@ -5,8 +5,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Film, Users, Clapperboard, Layers, Activity, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import axiosClient from '@/services/axios';
-// import AdminActivityLogs from '../_components/AdminActivityLogs';
-// import SystemPerformance from '../_components/SystemPerformance';
 
 export default function AdminDashboardPage() {
   const { data: stats, isLoading } = useQuery({
