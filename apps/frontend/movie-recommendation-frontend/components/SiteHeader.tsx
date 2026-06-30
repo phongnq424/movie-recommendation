@@ -23,7 +23,6 @@ const navItems = [
     { label: "Diễn viên", href: "/actors" },
 ];
 
-// Cập nhật kiểu dữ liệu định nghĩa cho user để nhận diện mảng roles từ localStorage
 interface UserInfo {
     fullName: string;
     roles: string[];
