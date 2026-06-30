@@ -13,7 +13,7 @@ export default function AdminDashboardPage() {
       const [movies, genres, actors, users] = await Promise.all([
         axiosClient.get('/movies').then(res => res.data).catch(() => []),
         axiosClient.get('/genres').then(res => res.data).catch(() => []),
-        axiosClient.get('/actors').then(res => res.data).catch(() => []),
+        axiosClient.get('/actors').then(res => res.data.content).catch(() => []),
         axiosClient.get('/users').then(res => res.data).catch(() => [])
       ]);
 
