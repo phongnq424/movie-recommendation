@@ -5,8 +5,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Film, Users, Clapperboard, Layers, Activity, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import axiosClient from '@/services/axios';
-// import AdminActivityLogs from '../_components/AdminActivityLogs';
-// import SystemPerformance from '../_components/SystemPerformance';
 
 export default function AdminDashboardPage() {
   const { data: stats, isLoading } = useQuery({
@@ -15,7 +13,7 @@ export default function AdminDashboardPage() {
       const [movies, genres, actors, users] = await Promise.all([
         axiosClient.get('/movies').then(res => res.data).catch(() => []),
         axiosClient.get('/genres').then(res => res.data).catch(() => []),
-        axiosClient.get('/actors').then(res => res.data).catch(() => []),
+        axiosClient.get('/actors').then(res => res.data.content).catch(() => []),
         axiosClient.get('/users').then(res => res.data).catch(() => [])
       ]);
 
@@ -49,24 +47,6 @@ export default function AdminDashboardPage() {
           >
             Tổng quan
           </button>
-          {/* <button
-            onClick={() => setActiveTab('logs')}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${activeTab === 'logs'
-                ? 'bg-red-600 text-white font-bold shadow'
-                : 'text-zinc-400 hover:text-white'
-              }`}
-          >
-            Nhật ký hệ thống
-          </button>
-          <button
-            onClick={() => setActiveTab('performance')}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${activeTab === 'performance'
-                ? 'bg-red-600 text-white font-bold shadow'
-                : 'text-zinc-400 hover:text-white'
-              }`}
-          >
-            Hiệu năng & Tài nguyên
-          </button> */}
         </div>
       </div>
 
