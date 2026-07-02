@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import YouTube, { YouTubeProps } from "react-youtube";
+import { Play } from "lucide-react";
 import { movieService } from "@/services/movie.service";
 
 interface YoutubeMoviePlayerProps {
@@ -9,20 +10,54 @@ interface YoutubeMoviePlayerProps {
     moviePublicId: string;
 }
 
-export function YoutubeMoviePlayer({ movieUrl, moviePublicId }: YoutubeMoviePlayerProps) {
-    const [hasTrackedPlay, setHasTrackedPlay] = useState(false);
-    const [hasTrackedFinish, setHasTrackedFinish] = useState(false);
+export function YoutubeMoviePlayer({
+    movieUrl,
+    moviePublicId,
+}: YoutubeMoviePlayerProps) {
+    const [fallbackStarted, setFallbackStarted] = useState(false);
 
     const playerRef = useRef<any>(null);
+    const hasTrackedPlayRef = useRef(false);
+    const hasTrackedFinishRef = useRef(false);
 
     const getYouTubeId = (url: string) => {
         if (!url) return null;
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+
+        const regExp =
+            /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+
         const match = url.match(regExp);
+
         return match && match[2].length === 11 ? match[2] : null;
     };
 
     const videoId = getYouTubeId(movieUrl);
+
+    const trackPlayOnce = async () => {
+        if (hasTrackedPlayRef.current || !moviePublicId) {
+            return;
+        }
+
+        hasTrackedPlayRef.current = true;
+
+        try {
+            await movieService.increaseViewCount(moviePublicId);
+            console.log("Successfully increased view count:", moviePublicId);
+        } catch (error) {
+            console.error("Failed to increase view count:", error);
+        }
+
+        try {
+            await movieService.trackInteraction(moviePublicId, {
+                interactionType: "PLAY",
+                value: 1,
+            });
+
+            console.log("Successfully registered PLAY interaction:", moviePublicId);
+        } catch (error) {
+            console.error("Failed to track PLAY interaction:", error);
+        }
+    };
 
     const onReady: YouTubeProps["onReady"] = (event) => {
         playerRef.current = event.target;
@@ -55,24 +90,7 @@ export function YoutubeMoviePlayer({ movieUrl, moviePublicId }: YoutubeMoviePlay
     };
 
     const onPlayerPlay: YouTubeProps["onPlay"] = async () => {
-        if (hasTrackedPlay) {
-            return;
-        }
-
-        try {
-            setHasTrackedPlay(true);
-
-            await movieService.increaseViewCount(moviePublicId);
-
-            await movieService.trackInteraction(moviePublicId, {
-                interactionType: "PLAY",
-                value: 1,
-            });
-
-            console.log("Successfully registered PLAY interaction:", moviePublicId);
-        } catch (error) {
-            console.error("Failed to track PLAY interaction:", error);
-        }
+        await trackPlayOnce();
     };
 
     const onPlayerPause: YouTubeProps["onPause"] = async () => {
@@ -94,13 +112,13 @@ export function YoutubeMoviePlayer({ movieUrl, moviePublicId }: YoutubeMoviePlay
     };
 
     const onPlayerEnd: YouTubeProps["onEnd"] = async () => {
-        if (hasTrackedFinish) {
+        if (hasTrackedFinishRef.current) {
             return;
         }
 
-        try {
-            setHasTrackedFinish(true);
+        hasTrackedFinishRef.current = true;
 
+        try {
             const progressData = getProgressData();
 
             await movieService.trackInteraction(moviePublicId, {
@@ -111,13 +129,34 @@ export function YoutubeMoviePlayer({ movieUrl, moviePublicId }: YoutubeMoviePlay
                 progressPercent: 100,
             });
 
-            console.log("Successfully registered FINISH_WATCHING interaction:", moviePublicId);
+            console.log(
+                "Successfully registered FINISH_WATCHING interaction:",
+                moviePublicId
+            );
         } catch (error) {
             console.error("Failed to track FINISH_WATCHING interaction:", error);
         }
     };
 
     if (!videoId) {
+        if (!fallbackStarted) {
+            return (
+                <div className="flex h-full w-full items-center justify-center bg-black">
+                    <button
+                        type="button"
+                        onClick={async () => {
+                            setFallbackStarted(true);
+                            await trackPlayOnce();
+                        }}
+                        className="inline-flex items-center gap-3 rounded-2xl bg-red-600 px-8 py-4 text-lg font-bold text-white transition hover:bg-red-500 active:scale-95"
+                    >
+                        <Play className="h-5 w-5" />
+                        Xem phim
+                    </button>
+                </div>
+            );
+        }
+
         return (
             <iframe
                 src={movieUrl}
@@ -139,7 +178,7 @@ export function YoutubeMoviePlayer({ movieUrl, moviePublicId }: YoutubeMoviePlay
     };
 
     return (
-        <div className="w-full h-full">
+        <div className="h-full w-full">
             <YouTube
                 videoId={videoId}
                 opts={opts}
@@ -147,8 +186,8 @@ export function YoutubeMoviePlayer({ movieUrl, moviePublicId }: YoutubeMoviePlay
                 onPlay={onPlayerPlay}
                 onPause={onPlayerPause}
                 onEnd={onPlayerEnd}
-                className="w-full h-full flex items-center justify-center"
-                iframeClassName="w-full h-full aspect-video border-0"
+                className="flex h-full w-full items-center justify-center"
+                iframeClassName="h-full w-full aspect-video border-0"
             />
         </div>
     );
