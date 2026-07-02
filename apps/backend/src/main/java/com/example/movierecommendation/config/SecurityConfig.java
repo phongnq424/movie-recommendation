@@ -1,5 +1,6 @@
 package com.example.movierecommendation.config;
 
+import com.example.movierecommendation.ratelimit.RateLimitFilter;
 import com.example.movierecommendation.security.CustomAccessDeniedHandler;
 import com.example.movierecommendation.security.CustomAuthenticationEntryPoint;
 import com.example.movierecommendation.security.JwtAuthenticationFilter;
@@ -25,6 +26,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitFilter rateLimitFilter;
     private final UserDetailsService userDetailsService;
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
     private final CustomAccessDeniedHandler accessDeniedHandler;
@@ -34,9 +36,16 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(request -> {
-                    org.springframework.web.cors.CorsConfiguration config = new org.springframework.web.cors.CorsConfiguration();
-                    config.setAllowedOrigins(java.util.List.of("https://movie-recommendation-sigma-ten.vercel.app/", "http://localhost:3000/"));
-                    config.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+                    org.springframework.web.cors.CorsConfiguration config =
+                            new org.springframework.web.cors.CorsConfiguration();
+
+                    config.setAllowedOrigins(java.util.List.of(
+                            "https://movie-recommendation-sigma-ten.vercel.app/",
+                            "http://localhost:3000/"
+                    ));
+                    config.setAllowedMethods(java.util.List.of(
+                            "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
+                    ));
                     config.setAllowedHeaders(java.util.List.of("*"));
                     config.setAllowCredentials(true);
 
@@ -53,7 +62,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-
                         // Route existence should be decided by Spring MVC.
                         // Authorization is enforced at controller/service method level.
                         .anyRequest().permitAll()
@@ -62,6 +70,10 @@ public class SecurityConfig {
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
+                )
+                .addFilterAfter(
+                        rateLimitFilter,
+                        JwtAuthenticationFilter.class
                 )
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable);
@@ -73,6 +85,7 @@ public class SecurityConfig {
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
+
         return provider;
     }
 
